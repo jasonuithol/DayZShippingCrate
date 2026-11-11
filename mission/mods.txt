@@ -1,0 +1,12 @@
+# Shipping Crate test bed: Expansion Missions (the airdrops we hijack), our HandCart (the hand
+# truck in the default load) and Shipping Crate itself, built from ../ShippingCrate (DayZMissions
+# mods/ShippingCrate is a symlink to it). Players need it too: it draws the falling container.
+1559212036 @CF
+2545327648 @DabsFramework
+2116157322 @DayZ-Expansion-Licensed
+2291785308 @DayZ-Expansion-Core
+2792984177 @DayZ-Expansion-Missions
+# while testing: Expansion's map on M, with the airdrop marker
+2792984722 @DayZ-Expansion-Navigation
+local @HandCart
+local @ShippingCrate

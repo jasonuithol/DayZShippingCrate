@@ -1,0 +1,49 @@
+{
+    "enabled": true,
+    "clusterRadius": 1000,
+    "dropRadius": 1,
+    "searchRadius": 200,
+    "maxSlope": 8,
+    "openDoors": false,
+    "colours": ["Blue", "Yellow", "Orange", "Red"],
+    "drops": [
+        {
+            "name": "Ada and SCRs",
+            "weight": 1,
+            "vehicle": {
+                "type": "OffroadHatchback",
+                "fluids": true,
+                "attachments": [
+                    {"type": "HatchbackWheel", "count": 5},
+                    {"type": "HatchbackDoors_Driver"},
+                    {"type": "HatchbackDoors_CoDriver"},
+                    {"type": "HatchbackHood"},
+                    {"type": "HatchbackTrunk"},
+                    {"type": "CarBattery"},
+                    {"type": "CarRadiator"},
+                    {"type": "SparkPlug"},
+                    {"type": "HeadlightH7", "count": 2}
+                ],
+                "cargo": [
+                    {
+                        "type": "SCARH",
+                        "count": 4,
+                        "magazine": "Mag_SCARH_20Rnd",
+                        "attachments": [
+                            {"type": "SCAR_StockBttstck"},
+                            {"type": "ACOGOptic"},
+                            {"type": "UniversalLight", "attachments": [{"type": "Battery9V"}]}
+                        ]
+                    },
+                    {"type": "Mag_SCARH_20Rnd", "count": 8},
+                    {"type": "GlassBottle", "liquid": "Gasoline", "quantity": 1},
+                    {"type": "PetrolLighter"},
+                    {"type": "Rope"}
+                ]
+            },
+            "items": [
+                {"type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"}
+            ]
+        }
+    ]
+}

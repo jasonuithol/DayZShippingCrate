@@ -1,0 +1,5 @@
+Expansion's airdrops, delivered by shipping container. When an Expansion Missions airdrop starts, the plane heads for the middle of the biggest group of players instead of a fixed town, and what comes down under two parachutes is a full-size shipping container. Open the doors: a fitted-out, fuelled Ada, nose to the doors, with four SCR 17s (ACOG, stock, light, loaded) and spare magazines in the boot, a bottle of petrol, a lighter and a rope, and a hand truck behind it. No infected at the drop.
+
+What's in the container is a JSON file the server writes on its first start (profiles/ShippingCrate/ShippingCrate.json): any vehicle with any parts, anything in its boot, anything on the floor, several loads picked at random by weight.
+
+Requires DayZ Expansion Missions (and its Core, CF, Dabs Framework). Load on server and clients with -mod= (players need it to see the falling container). The default load's hand truck comes from our Hand Truck mod; without it, that one item is skipped.
