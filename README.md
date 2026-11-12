@@ -27,6 +27,16 @@ truck.
    mission: time up, and nobody within 1100 m. When Expansion deletes the crate, the container
    goes with it. The vehicle and everything else stays, like any other loot.
 
+4. **Lights.** The plane carries red, green and white navigation lights (left wingtip, right
+   wingtip, tail). A spotlight under the falling container lights the ground below, and a
+   runway edge light at each end of its roof turns an orange beacon, falling and landed.
+5. **Self-destruct.** On the roof sit a 4 x 2 grid of IEDs and a teddy bear. `selfDestructMinutes`
+   (10) after landing the bear's eyes glow red and it calls "Эвакуируйтесь!" ("Evacuate!")
+   every 3 s; `warningSeconds` (60) later the roof blows (real C4, real damage) and the
+   container and every vehicle and item in it are removed, the mission with them. That keeps
+   containers from piling up, and with them memory. Everything on the roof and the plane is
+   scenery: nothing can be picked up.
+
 Player-called airdrops (supply signals) are left alone. The container doesn't survive a server
 restart (script-placed buildings aren't saved); what was in it does.
 
@@ -49,6 +59,8 @@ restart (script-placed buildings aren't saved); what was in it does.
     "searchRadius": 200,
     "maxSlope": 8,
     "openDoors": false,
+    "selfDestructMinutes": 10,
+    "warningSeconds": 60,
     "colours": ["Blue", "Yellow", "Orange", "Red"],
     "drops": [
         {
@@ -79,6 +91,8 @@ restart (script-placed buildings aren't saved); what was in it does.
 | `dropRadius` | Expansion's random spread around the drop spot (m). Wind drift grows with it too, so keep it small. |
 | `searchRadius`, `maxSlope` | How far (m) from the group's centre to look for ground at most `maxSlope` degrees off level. |
 | `openDoors` | The doors are always unlocked; `true` opens them as well. |
+| `selfDestructMinutes` | Minutes after landing until the bear starts warning; then it all blows up and is removed. `-1`: never (the container then goes when Expansion ends the mission). |
+| `warningSeconds` | How long the bear warns before the blast. |
 | `colours` | Which of the four vanilla containers to pick from: `Blue`, `Yellow`, `Orange`, `Red`. |
 | `drops` | The possible loads. Each drop picks one at random, weighted by `weight`. |
 | `drops[].vehicle` | Optional. Parked inside, front bumper 30 cm from the doors. |
@@ -116,7 +130,10 @@ check where it ended up.
 | `.../SC_Spawn.c` | Placing and loading the container |
 | `.../SC_Settings.c` | The JSON settings |
 | `mission/` | Test mission on Chernarus |
+| `.../SC_Lights.c` | The lights: navigation lights, spotlight, beacons, the bear's eyes |
+| `ShippingCrate/data/` | Glowing materials (navigation markers, beacon dome) and the bear's voice |
 | `tools/make_preview.py` | Draws the Workshop picture, `ShippingCrate/preview.png` |
+| `tools/make_sounds.py` | Speaks the bear's "Эвакуируйтесь!" with the espeak-ng library (packages `libespeak-ng1`, `espeak-ng-data`) |
 | `CHANGELOG.md` | One entry per release; the entry is also the Workshop change note |
 
 ## Testing

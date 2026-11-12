@@ -5,6 +5,8 @@
     "searchRadius": 200,
     "maxSlope": 8,
     "openDoors": false,
+    "selfDestructMinutes": 10,
+    "warningSeconds": 60,
     "colours": ["Blue", "Yellow", "Orange", "Red"],
     "drops": [
         {

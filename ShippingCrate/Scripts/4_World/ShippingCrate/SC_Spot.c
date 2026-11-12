@@ -142,6 +142,17 @@ class SC_Spot
 		return false;
 	}
 
+	static bool IsPlainAscii(string s)
+	{
+		for (int i = 0; i < s.Length(); i++)
+		{
+			int c = s.Get(i).ToAscii();
+			if (c < 32 || c > 126)
+				return false;
+		}
+		return true;
+	}
+
 	// Name of the nearest town or village, for Expansion's "airdrop heading towards ..." messages.
 	static string NearestTown(vector p)
 	{
@@ -168,13 +179,17 @@ class SC_Spot
 			float d = dx * dx + dz * dz;
 			if (d < bestD)
 			{
-				// the class name, not "name": that's often in the map's own language and script
-				// (Cyrillic on Chernarus). Settlement_Chernogorsk -> Chernogorsk
-				string name = child;
-				int underscore = name.IndexOf("_");
-				if (underscore >= 0 && underscore < name.Length() - 1)
-					name = name.Substring(underscore + 1, name.Length() - underscore - 1);
-				name.Replace("_", " ");
+				// "name" if it's plain ASCII (Nasdara: City_2 is "Dashtabad"), else the class name:
+				// on Chernarus "name" is Cyrillic, but Settlement_Chernogorsk -> Chernogorsk
+				string name = g_Game.ConfigGetTextOut(entry + " name");
+				if (name == "" || name.IndexOf("$") == 0 || !IsPlainAscii(name))
+				{
+					name = child;
+					int underscore = name.IndexOf("_");
+					if (underscore >= 0 && underscore < name.Length() - 1)
+						name = name.Substring(underscore + 1, name.Length() - underscore - 1);
+					name.Replace("_", " ");
+				}
 				bestD = d;
 				best = name;
 			}

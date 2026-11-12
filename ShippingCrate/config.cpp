@@ -2,10 +2,10 @@ class CfgPatches
 {
 	class ShippingCrate
 	{
-		units[] = {"ShippingCrate_Airdrop"};
+		units[] = {"ShippingCrate_Airdrop", "SC_RunwayLight", "SC_Prop_IED", "SC_Prop_Bear", "SC_Prop_GlowRed", "SC_Prop_GlowGreen", "SC_Prop_GlowWhite"};
 		weapons[] = {};
 		requiredVersion = 0.1;
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Structures_Industrial", "DayZExpansion_Missions_Scripts", "DayZExpansion_Objects_Missions"};
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Structures_Industrial", "DZ_Structures_Specific", "DZ_Sounds_Effects", "DZ_Gear_Containers", "DZ_Gear_Consumables", "DZ_Weapons_Explosives", "DayZExpansion_Missions_Scripts", "DayZExpansion_Objects_Missions"};
 	};
 };
 
@@ -31,6 +31,7 @@ class CfgMods
 
 class CfgVehicles
 {
+	class HouseNoDestruct;
 	class ExpansionAirdropContainerBase_Server;
 	class ExpansionAirdropContainerBase_Client;
 
@@ -42,9 +43,80 @@ class CfgVehicles
 		scope = 1;
 		displayName = "Shipping container";
 	};
+	// The airfield's runway edge light, with its dome ("zluty pozicni", the yellow position
+	// light) in semi-transparent orange that glows from within. Clients stand one on each end of
+	// the container, its lamp the rotating beacon.
+	class SC_RunwayLight: HouseNoDestruct
+	{
+		scope = 1;
+		model = "DZ\structures\Specific\Airfields\Airfield_Light_Edge.p3d";
+		hiddenSelections[] = {"zluty pozicni"};
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(1,0.45,0.05,0.55,CA)"};
+		hiddenSelectionsMaterials[] = {"ShippingCrate\data\sc_lens_orange.rvmat"};
+	};
+	// Props for the roof and the plane: vanilla models and textures as buildings rather than
+	// items, so players can't pick them up or do anything else with them. Clients create them
+	// locally, without collision.
+	class SC_Prop_IED: HouseNoDestruct
+	{
+		scope = 1;
+		model = "\DZ\weapons\explosives\ImprovisedExplosive.p3d";
+		hiddenSelections[] = {"zbytek"};
+		hiddenSelectionsTextures[] = {"dz\weapons\explosives\data\ied_co.paa"};
+		hiddenSelectionsMaterials[] = {"dz\weapons\explosives\data\ied.rvmat"};
+	};
+	class SC_Prop_Bear: HouseNoDestruct
+	{
+		scope = 1;
+		model = "\dz\gear\containers\teddybear.p3d";
+		hiddenSelections[] = {"camoGround"};
+		hiddenSelectionsTextures[] = {"\dz\gear\containers\Data\teddybear_brown_co.paa"};
+		hiddenSelectionsMaterials[] = {"DZ\gear\containers\data\teddybear.rvmat"};
+	};
+	// a chemlight's shape in a solid, strongly glowing colour: the plane's navigation markers and
+	// the bear's eyes
+	class SC_Prop_GlowRed: HouseNoDestruct
+	{
+		scope = 1;
+		model = "\dz\gear\consumables\Chemlight.p3d";
+		hiddenSelections[] = {"camo"};
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(1,0,0,1,CO)"};
+		hiddenSelectionsMaterials[] = {"ShippingCrate\data\sc_nav_red.rvmat"};
+	};
+	class SC_Prop_GlowGreen: SC_Prop_GlowRed
+	{
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(0,1,0.2,1,CO)"};
+		hiddenSelectionsMaterials[] = {"ShippingCrate\data\sc_nav_green.rvmat"};
+	};
+	class SC_Prop_GlowWhite: SC_Prop_GlowRed
+	{
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(1,1,1,1,CO)"};
+		hiddenSelectionsMaterials[] = {"ShippingCrate\data\sc_nav_white.rvmat"};
+	};
 	// only used if Expansion is built with EXPANSION_MISSIONS_CONTAINER_CLIENT
 	class ShippingCrate_Airdrop_Client: ExpansionAirdropContainerBase_Client
 	{
 		scope = 1;
+	};
+};
+
+// the teddy bear's warning, every 3 s for the last minute before the container blows
+class CfgSoundShaders
+{
+	class baseCharacter_SoundShader;
+	class SC_Evacuate_SoundShader: baseCharacter_SoundShader
+	{
+		samples[] = {{"ShippingCrate\data\sounds\evacuate", 1}};
+		volume = 1;
+		range = 150;
+	};
+};
+
+class CfgSoundSets
+{
+	class baseCharacter_SoundSet;
+	class SC_Evacuate_SoundSet: baseCharacter_SoundSet
+	{
+		soundShaders[] = {"SC_Evacuate_SoundShader"};
 	};
 };

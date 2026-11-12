@@ -15,7 +15,7 @@ void main()
 	Hive ce = CreateHive();
 	if (ce)
 		ce.InitOffline();
-	GetGame().GetWorld().SetDate(2026, 9, 20, 10, 0);
+	GetGame().GetWorld().SetDate(2026, 9, 20, 22, 30);   // night, to see the lights
 }
 
 class CustomMission: MissionServer
@@ -234,14 +234,16 @@ class CustomMission: MissionServer
 		}
 		Print("[SCTest] " + loose + " loose items");
 
-		// the mission ending deletes the crate: the container must go with it, the rest stays
-		GetGame().ObjectDelete(m_Crate);
-		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(AfterEnd, 1000, false, box, car);
+		// the self-destruct, now rather than 10 minutes after landing: the bear warns, the roof
+		// blows, and the container and everything in it (the Ada, the hand truck) are removed
+		m_Crate.SC_Warn();
+		m_Crate.SC_Detonate();
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(AfterEnd, 4000, false, box, car);
 	}
 
 	void AfterEnd(Building box, CarScript car)
 	{
-		Print("[SCTest] after the crate was deleted: container " + box + ", vehicle " + car);
+		Print("[SCTest] after the self-destruct: crate " + m_Crate + ", container " + box + ", vehicle " + car);
 		GetGame().RequestExit(0);
 	}
 

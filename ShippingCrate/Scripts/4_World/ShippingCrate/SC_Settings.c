@@ -33,6 +33,8 @@ class SC_Config
 	float searchRadius = 200;    // how far from the group's centre to look for flat, clear ground
 	float maxSlope = 8;          // degrees
 	bool openDoors = false;      // the doors are always unlocked; this opens them too
+	int selfDestructMinutes = 10; // after landing: then the bear warns, then it all blows up and is removed; -1 = never
+	int warningSeconds = 60;     // how long the bear warns before it blows
 	ref array<string> colours = {"Blue", "Yellow", "Orange", "Red"};
 	ref array<ref SC_Drop> drops = new array<ref SC_Drop>();
 }
@@ -112,6 +114,10 @@ class SC_Settings
 			c.maxSlope = 8;
 		if (c.dropRadius < 0)
 			c.dropRadius = 0;
+		if (c.selfDestructMinutes == 0)
+			c.selfDestructMinutes = 10;
+		if (c.warningSeconds <= 0)
+			c.warningSeconds = 60;
 		if (!c.colours || c.colours.Count() == 0)
 			c.colours = {"Blue", "Yellow", "Orange", "Red"};
 		if (!c.drops)
