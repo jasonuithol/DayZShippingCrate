@@ -20,6 +20,22 @@ class SC_Spot
 		return positions;
 	}
 
+	// the living players within radius of centre
+	static array<PlayerBase> GroupPlayers(vector centre, float radius)
+	{
+		array<PlayerBase> group = new array<PlayerBase>();
+		array<Man> men = new array<Man>();
+		g_Game.GetPlayers(men);
+		float r2 = radius * radius;
+		foreach (Man man : men)
+		{
+			PlayerBase player;
+			if (Class.CastTo(player, man) && player.IsAlive() && Dist2D2(player.GetPosition(), centre) <= r2)
+				group.Insert(player);
+		}
+		return group;
+	}
+
 	// Centre of the biggest group: for each player, everyone within radius of them; the player
 	// with the most neighbours wins, and the drop goes to the average of that group.
 	static bool Cluster(array<vector> positions, float radius, out vector centre, out int size)

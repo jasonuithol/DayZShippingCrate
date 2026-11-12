@@ -49,6 +49,17 @@ class CustomMission: MissionServer
 		// a few seconds, so the player is in the world when the group is worked out
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(StartTestAirdrop, 5000, false);
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(StartTestAirdrop, TEST_INTERVAL_MS, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckDropNow, 2000, true);
+	}
+
+	// an extra drop on request: create $profile:sc_drop_now and one starts within 2 s
+	void CheckDropNow()
+	{
+		if (!FileExist("$profile:sc_drop_now"))
+			return;
+		DeleteFile("$profile:sc_drop_now");
+		Print("[SCTest] drop requested");
+		StartTestAirdrop();
 	}
 
 	void StartTestAirdrop()
@@ -99,6 +110,11 @@ class CustomMission: MissionServer
 			foreach (SC_Item item : drop.items)
 				unknown += CheckNames(item);
 		}
+		foreach (SC_Gun gunKit : cfg.guns)
+		{
+			foreach (SC_Item gunItem : gunKit.cargo)
+				unknown += CheckNames(gunItem);
+		}
 		for (int c = 1; c <= SC_Settings.COLOURS.Count(); c++)
 		{
 			if (!GetGame().ConfigIsExisting("CfgVehicles " + SC_Settings.ContainerType(c)))
@@ -108,6 +124,31 @@ class CustomMission: MissionServer
 			}
 		}
 		Print("[SCTest] unknown class names: " + unknown);
+
+		// delivery radios: each knob cycles through its list; a tuned knob picks its half
+		SC_DropRadio blank = SC_DropRadio.Cast(GetGame().CreateObjectEx("SC_DropRadio", TEST_NEAR + "0 1 5", ECE_SETUP));
+		SC_DropRadio tuned = SC_DropRadio.Cast(GetGame().CreateObjectEx("SC_DropRadio", TEST_NEAR + "1 1 5", ECE_SETUP));
+		if (!blank || !tuned)
+			Print("[SCTest] radio: could not create SC_DropRadio");
+		else
+		{
+			tuned.SC_TuneVehicle();
+			tuned.SC_TuneVehicle();
+			tuned.SC_TuneGuns();
+			tuned.SC_TuneGuns();
+			tuned.SC_TuneGuns();
+			array<SC_DropRadio> none = {blank};
+			array<SC_DropRadio> some = {blank, tuned};
+			string pickedDrop = "nothing";
+			string pickedGun = "nothing";
+			if (SC_DropRadio.ChooseDrop(some))
+				pickedDrop = SC_DropRadio.ChooseDrop(some).name;
+			if (SC_DropRadio.ChooseGun(some))
+				pickedGun = SC_DropRadio.ChooseGun(some).name;
+			Print("[SCTest] radio: knobs on " + tuned.m_SC_TunedVehicle + " / " + tuned.m_SC_TunedGun + "; untuned picks " + SC_DropRadio.ChooseDrop(none) + " / " + SC_DropRadio.ChooseGun(none) + "; with the tuned one: " + pickedDrop + " / " + pickedGun);
+			GetGame().ObjectDelete(blank);
+			GetGame().ObjectDelete(tuned);
+		}
 
 		// two players together in Chernogorsk, one alone at NWAF: the group of two wins
 		array<vector> players = {"6500 0 2500", "6560 0 2440", "4800 0 9800"};
@@ -132,8 +173,7 @@ class CustomMission: MissionServer
 			return;
 		}
 		m_Crate.SetPosition(high);
-		m_Crate.m_SC_Drop = SC_Settings.Pick();
-		m_Crate.SC_SetColour(SC_Settings.PickColour());
+		m_Crate.SC_Setup(SC_Settings.Pick(), SC_Settings.PickGun());
 		m_Crate.Expansion_InitAirdrop(new array<ref ExpansionLoot>(), new TStringArray(), 0, 0, 4.5, 0);
 		Print("[SCTest] crate dropped from " + high);
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(WaitForLanding, 1000, false);
@@ -142,7 +182,7 @@ class CustomMission: MissionServer
 	void WaitForLanding()
 	{
 		m_Polls++;
-		if (m_Crate && !m_Crate.m_SC_Box && m_Polls <= 90)
+		if (m_Crate && !m_Crate.SC_HasLanded() && m_Polls <= 90)
 		{
 			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(WaitForLanding, 1000, false);
 			return;
@@ -244,6 +284,126 @@ class CustomMission: MissionServer
 	void AfterEnd(Building box, CarScript car)
 	{
 		Print("[SCTest] after the self-destruct: crate " + m_Crate + ", container " + box + ", vehicle " + car);
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(PalletTest, 1000, false);
+	}
+
+	// A load too big for the container: an M3S truck, which should come down on a pallet with
+	// a barrel and a sea chest on the free end, then blow up and go like the container.
+	ShippingCrate_Airdrop m_Pallet;
+	vector m_PalletSpot;
+	int m_PalletPolls;
+
+	void PalletTest()
+	{
+		// the config's own truck load if there is one, else one made here
+		foreach (SC_Drop configured : SC_Settings.Get().drops)
+		{
+			if (configured.name == "M3S truck")
+			{
+				StartPallet(configured);
+				return;
+			}
+		}
+		SC_Drop truck = new SC_Drop();
+		truck.name = "pallet test";
+		truck.vehicle = new SC_Item();
+		truck.vehicle.type = "Truck_01_Covered";
+		truck.vehicle.fluids = true;
+		array<string> parts = {"Truck_01_Wheel", "Truck_01_Wheel", "Truck_01_WheelDouble", "Truck_01_WheelDouble", "Truck_01_WheelDouble", "Truck_01_WheelDouble", "TruckBattery"};
+		foreach (string part : parts)
+		{
+			SC_Item a = new SC_Item();
+			a.type = part;
+			truck.vehicle.attachments.Insert(a);
+		}
+		array<string> loose = {"Barrel_Blue", "SeaChest"};
+		foreach (string l : loose)
+		{
+			SC_Item it = new SC_Item();
+			it.type = l;
+			truck.items.Insert(it);
+		}
+
+		StartPallet(truck);
+	}
+
+	void StartPallet(SC_Drop truck)
+	{
+		m_PalletSpot = SC_Spot.FlatGround(m_Spot + "60 0 0", 150, 8);
+		vector high = m_PalletSpot;
+		high[1] = high[1] + 60;
+		m_Pallet = ShippingCrate_Airdrop.Cast(GetGame().CreateObjectEx("ShippingCrate_Airdrop", high, ECE_CREATEPHYSICS | ECE_AIRBORNE | ECE_NOLIFETIME));
+		m_Pallet.SetPosition(high);
+		m_Pallet.SC_Setup(truck, SC_Settings.PickGun());
+		m_Pallet.Expansion_InitAirdrop(new array<ref ExpansionLoot>(), new TStringArray(), 0, 0, 4.5, 0);
+		Print("[SCTest] pallet: truck crate dropped from " + high + ", carrier " + m_Pallet.m_SC_Carrier + " (1 = pallet)");
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(WaitForPallet, 1000, false);
+	}
+
+	void WaitForPallet()
+	{
+		m_PalletPolls++;
+		if (m_Pallet && !m_Pallet.SC_HasLanded() && m_PalletPolls <= 90)
+		{
+			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(WaitForPallet, 1000, false);
+			return;
+		}
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(InspectPallet, 8000, false);
+	}
+
+	void InspectPallet()
+	{
+		array<Object> objects = new array<Object>();
+		array<CargoBase> proxies = new array<CargoBase>();
+		GetGame().GetObjectsAtPosition(m_PalletSpot, 15, objects, proxies);
+		int tiles = 0;
+		CarScript truck;
+		string items = "";
+		foreach (Object o : objects)
+		{
+			if (o.GetType() == SC_Pallet.TILE)
+				tiles++;
+			if (o.IsInherited(CarScript))
+				Class.CastTo(truck, o);
+			if (o.IsInherited(ItemBase) && !EntityAI.Cast(o).GetHierarchyParent())
+				items += " " + o.GetType() + " (" + (o.GetPosition()[1] - GetGame().SurfaceY(o.GetPosition()[0], o.GetPosition()[2])) + " m up)";
+		}
+		Print("[SCTest] pallet: " + tiles + " pallets, loose items:" + items);
+		if (truck)
+		{
+			string fitted = "";
+			for (int pi = 0; pi < truck.GetInventory().AttachmentCount(); pi++)
+				fitted += " " + truck.GetInventory().GetAttachmentFromIndex(pi).GetType();
+			string carried = "";
+			CargoBase cargo = truck.GetInventory().GetCargo();
+			if (cargo)
+			{
+				for (int ci = 0; ci < cargo.GetItemCount(); ci++)
+					carried += " " + cargo.GetItem(ci).GetType();
+			}
+			Print("[SCTest] pallet: parts" + fitted + "; cargo" + carried + "; " + truck.GetInventory().GetAttachmentSlotsCount() + " slots");
+		}
+		if (truck)
+			Print("[SCTest] pallet: " + truck.GetType() + " bottom " + (truck.GetPosition()[1] - GetGame().SurfaceY(truck.GetPosition()[0], truck.GetPosition()[2])) + " m up, up " + truck.GetDirectionUp() + ", parts " + truck.GetInventory().AttachmentCount() + ", ruined " + truck.IsDamageDestroyed());
+		else
+			Print("[SCTest] pallet: no truck");
+		m_Pallet.SC_Warn();
+		m_Pallet.SC_Detonate();
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(AfterPallet, 4000, false, truck);
+	}
+
+	void AfterPallet(CarScript truck)
+	{
+		array<Object> objects = new array<Object>();
+		array<CargoBase> proxies = new array<CargoBase>();
+		GetGame().GetObjectsAtPosition(m_PalletSpot, 15, objects, proxies);
+		int tiles = 0;
+		foreach (Object o : objects)
+		{
+			if (o.GetType() == SC_Pallet.TILE)
+				tiles++;
+		}
+		Print("[SCTest] pallet after the self-destruct: crate " + m_Pallet + ", truck " + truck + ", pallets left " + tiles);
 		GetGame().RequestExit(0);
 	}
 

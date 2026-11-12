@@ -23,6 +23,10 @@ modded class ExpansionMissionEventBase
 	[NonSerialized()]
 	SC_Drop m_SC_Drop;
 	[NonSerialized()]
+	SC_Gun m_SC_Gun;
+	[NonSerialized()]
+	bool m_SC_Blown;   // set by the crate when the self-destruct went off
+	[NonSerialized()]
 	ref ExpansionAirdropLocation m_SC_SavedLocation;
 	[NonSerialized()]
 	int m_SC_SavedInfectedCount;
@@ -50,14 +54,39 @@ modded class ExpansionMissionEventBase
 		}
 	}
 
+	// Expansion's own "airdrop ended" line says "destroyed by infected" whatever happened; for
+	// our drops it's swapped for one that says what did
 	override void End()
 	{
+		ExpansionMissionEventAirdrop airdrop;
+		bool ours = m_SC_Active && Class.CastTo(airdrop, this);
+		bool notify = false;
+		bool shown = false;
+		string where = "";
+		if (ours)
+		{
+			shown = airdrop.ShowNotification;
+			notify = shown && GetExpansionSettings().GetNotification().ShowAirdropEnded;
+			where = airdrop.DropLocation.Name;
+			airdrop.ShowNotification = false;
+		}
+
 		super.End();
 
-		ExpansionMissionEventAirdrop airdrop;
-		if (m_SC_Active && Class.CastTo(airdrop, this))
+		if (ours)
+		{
+			airdrop.ShowNotification = shown;
+			if (notify)
+			{
+				string what = "has been cleared away";
+				if (m_SC_Blown)
+					what = "has self-destructed";
+				CreateNotification(new StringLocaliser("The delivery near " + where + " " + what + "."), EXPANSION_NOTIFICATION_ICON_AIRDROP, 7);
+			}
 			SC_Restore(airdrop);
+		}
 		m_SC_Active = false;
+		m_SC_Blown = false;
 	}
 
 	protected void SC_Prepare(ExpansionMissionEventAirdrop airdrop)
@@ -83,13 +112,33 @@ modded class ExpansionMissionEventBase
 		vector spot = SC_Spot.FlatGround(centre, cfg.searchRadius, cfg.maxSlope);
 		string town = SC_Spot.NearestTown(spot);
 
+		// delivery radios in the group pick the vehicle and the guns, each knob on its own
+		array<SC_DropRadio> radios = SC_DropRadio.Carried(SC_Spot.GroupPlayers(centre, cfg.clusterRadius));
+		string vehicleBy = "random";
+		SC_Drop askedDrop = SC_DropRadio.ChooseDrop(radios);
+		if (askedDrop)
+		{
+			drop = askedDrop;
+			vehicleBy = "by radio";
+		}
+		string gunBy = "random";
+		SC_Gun gun = SC_DropRadio.ChooseGun(radios);
+		if (gun)
+			gunBy = "by radio";
+		else
+			gun = SC_Settings.PickGun();
+		string gunName = "no guns";
+		if (gun)
+			gunName = gun.name;
+
 		m_SC_SavedLocation = airdrop.DropLocation;
 		m_SC_SavedInfectedCount = airdrop.InfectedCount;
 		airdrop.DropLocation = new ExpansionAirdropLocation(spot[0], spot[2], cfg.dropRadius, town);
 		airdrop.InfectedCount = 0;
 		m_SC_Drop = drop;
+		m_SC_Gun = gun;
 		m_SC_Active = true;
-		Print("[ShippingCrate] " + MissionName + ": shipping container (" + drop.name + ") for a group of " + size + " near " + town + " at " + spot);
+		Print("[ShippingCrate] " + MissionName + ": " + drop.name + " (" + vehicleBy + ") with " + gunName + " (" + gunBy + ") for a group of " + size + " near " + town + " at " + spot);
 	}
 
 	// put the mission's own location back, so the next run starts from the file's values
@@ -324,8 +373,7 @@ modded class ExpansionAirdropPlaneBase
 		if (Class.CastTo(crate, drop))
 		{
 			crate.m_SC_Mission = m_SC_Mission;
-			crate.m_SC_Drop = m_SC_Mission.m_SC_Drop;
-			crate.SC_SetColour(SC_Settings.PickColour());
+			crate.SC_Setup(m_SC_Mission.m_SC_Drop, m_SC_Mission.m_SC_Gun);
 		}
 		return drop;
 	}
@@ -334,57 +382,86 @@ modded class ExpansionAirdropPlaneBase
 
 class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 {
-	int m_SC_Colour;   // 1-based index into SC_Settings.COLOURS, 0 until the server picks one
+	// synchronised to clients
+	int m_SC_Colour;   // 1-based index into SC_Settings.COLOURS, 0 until the server picks one (container only)
+	int m_SC_Carrier;  // CARRIER_CONTAINER or CARRIER_PALLET
+	int m_SC_Stage;    // the self-destruct: 0 landed (or falling), 1 the bear's warning, 2 blown
+
+	static const int CARRIER_CONTAINER = 0;
+	static const int CARRIER_PALLET = 1;
+
+	// The vehicle and its parts, picked when the drop starts. Clients ask for them (RPC) to draw
+	// the vehicle on the falling pallet; netsync can't carry strings.
+	string m_SC_VehicleType;
+	string m_SC_VehicleParts;   // attachment types, ";" separated
+	static const int RPC_ASK = 0x5C0A01;
+	static const int RPC_INFO = 0x5C0A02;
 
 	// server
 	ExpansionMissionEventBase m_SC_Mission;
-	SC_Drop m_SC_Drop;
-	Building m_SC_Box;
+	ref SC_Drop m_SC_Drop;                             // held, so a load made in script (the test) outlives its maker
+	ref SC_Gun m_SC_Gun;
+	Building m_SC_Box;                                 // the landed container, if that's the carrier
+	EntityAI m_SC_Ride;                                // a pallet's vehicle: the real one, fitted and loaded, carried down on the crate
+	int m_SC_RideLow;                                  // synchronised: its network id, so clients can hold it on the
+	int m_SC_RideHigh;                                 // falling deck themselves (a sleeping body's moves aren't sent)
+	protected ref array<Object> m_SC_Parts = new array<Object>();   // what the carrier is made of: the container, or the deck's pallets
+	protected vector m_SC_Frame[4];                    // the landed carrier's frame and bounds (vehicle height included for a pallet)
+	protected vector m_SC_Min;
+	protected vector m_SC_Max;
+	protected float m_SC_BlastY;                       // frame height the C4 goes off at
 	protected bool m_SC_Waiting;
 	protected bool m_SC_Delivered;
 	protected int m_SC_Checks;
 
-	static const float PARK_DEPTH = 3;   // the crate waits this far underground once the container is there
+	static const float PARK_DEPTH = 3;      // the crate waits this far underground once the carrier is there
+	static const float CHUTE_TILT = 20;     // degrees the end parachutes lean away from the middle
+	static const float CHUTE_SPREAD = 0.7;  // how far along the carrier they hang: share of half its length
 
-	// client: Expansion's crate stays hidden; in its place a local shipping container whose floor
-	// is level with the crate's bottom, a parachute over each end, a spotlight underneath and a
-	// rotating beacon at each end. Once it has landed only the beacons stay, on the real
-	// container, until the mission ends and the crate goes.
-	protected Object m_SC_Local;
-	protected EntityAI m_SC_ChuteA;
-	protected EntityAI m_SC_ChuteB;
+	// client: Expansion's crate stays hidden; in its place a local container (or pallet with the
+	// vehicle on it) whose bottom is level with the crate's, parachutes over it, a spotlight
+	// underneath, a runway edge light at each end whose lamp is a rotating beacon, and the IEDs
+	// and teddy bear. Once it has landed the beacons and the decoration move onto the real thing
+	// until the mission ends and the crate goes.
+	protected Object m_SC_Local;                                    // falling container
+	protected ref array<Object> m_SC_Tiles = new array<Object>();   // falling pallet deck
+	protected Object m_SC_LocalVehicle;                             // ... and the vehicle on it: its model only
+	protected ref array<EntityAI> m_SC_Chutes = new array<EntityAI>();
 	protected ScriptedLightBase m_SC_Spot;
 	protected ScriptedLightBase m_SC_BeamA;
 	protected ScriptedLightBase m_SC_BeamB;
 	protected Object m_SC_PostA;
 	protected Object m_SC_PostB;
-	// the self-destruct: 0 landed (or falling), 1 the bear's warning, 2 blown
-	int m_SC_Stage;
-
-	// client: the roof decoration, a 4 x 2 grid of IEDs with a teddy bear sitting on top
 	protected ref array<Object> m_SC_Charges = new array<Object>();
 	protected Object m_SC_Bear;
 	protected Object m_SC_EyeL;
 	protected Object m_SC_EyeR;
-	protected ScriptedLightBase m_SC_EyeLightL;
-	protected ScriptedLightBase m_SC_EyeLightR;
 	protected float m_SC_NextVoice;
+	protected float m_SC_EyesUntil;
 	protected bool m_SC_LoggedDecor;
+	protected Object m_SC_Landed;
+	protected bool m_SC_Following;
+	protected float m_SC_Time;
+	protected float m_SC_NextSearch;
+	protected float m_SC_NextAsk;
 
 	static const string CHARGE = "SC_Prop_IED";       // config.cpp: the IED model, not an item
 	static const string BEAR = "SC_Prop_Bear";        // config.cpp: vanilla's Bear_Beige model, not an item
 	static const string EVACUATE_SOUND = "SC_Evacuate_SoundSet";
 	static const float VOICE_EVERY = 3;
+	static const float EYES_ON = 1.0;                  // seconds the eyes glow with each "Evacuate!" (the clip's length)
+	static const string EYE = "SC_Prop_EyeRed";        // config.cpp: a round, gently glowing red ball
+	static const float EYE_SIZE = 0.018;               // across, metres
+	static const float EYES_BACK = 0.060;              // from the front of the bear's bounding box
 	static const string BLAST = "Plastic_Explosive_Ammo";
-	protected Object m_SC_Landed;
-	protected bool m_SC_Following;
-	protected float m_SC_Time;
-	protected float m_SC_NextSearch;
 
 	void ShippingCrate_Airdrop()
 	{
 		RegisterNetSyncVariableInt("m_SC_Colour", 0, 8);
 		RegisterNetSyncVariableInt("m_SC_Stage", 0, 2);
+		RegisterNetSyncVariableInt("m_SC_Carrier", 0, 1);
+		RegisterNetSyncVariableInt("m_SC_RideLow");
+		RegisterNetSyncVariableInt("m_SC_RideHigh");
 	}
 
 	// Only unhooks: by the time the destructor runs (e.g. leaving the server) the local objects
@@ -409,12 +486,19 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		super.EEDelete(parent);
 		if (g_Game.IsDedicatedServer())
 		{
-			// Expansion deletes the crate when the mission ends: the container goes too
+			// Expansion deletes the crate when the mission ends: the carrier goes too
 #ifdef SERVER
 			SC_CancelTimers();
 #endif
-			if (m_SC_Box)
-				g_Game.ObjectDelete(m_SC_Box);
+			foreach (Object part : m_SC_Parts)
+			{
+				if (part)
+					g_Game.ObjectDelete(part);
+			}
+			if (m_SC_Ride)
+				g_Game.ObjectDelete(m_SC_Ride);   // the crate went before it landed
+			m_SC_Ride = null;
+			m_SC_Parts.Clear();
 			m_SC_Box = null;
 			return;
 		}
@@ -433,17 +517,91 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		m_SC_PostB = null;
 	}
 
+	override void OnRPC(PlayerIdentity sender, int rpc_type, ParamsReadContext ctx)
+	{
+		super.OnRPC(sender, rpc_type, ctx);
+		if (rpc_type == RPC_ASK && g_Game.IsDedicatedServer())
+		{
+			ScriptRPC rpc = new ScriptRPC();
+			rpc.Write(m_SC_VehicleType);
+			rpc.Write(m_SC_VehicleParts);
+			rpc.Send(this, RPC_INFO, true, sender);
+		}
+		else if (rpc_type == RPC_INFO && !g_Game.IsDedicatedServer())
+		{
+			string type;
+			string parts;
+			if (ctx.Read(type) && ctx.Read(parts))
+			{
+				m_SC_VehicleType = type;
+				m_SC_VehicleParts = parts;
+			}
+		}
+	}
+
+	bool SC_HasLanded()
+	{
+		return m_SC_Delivered;
+	}
+
 #ifdef SERVER
+	// When the plane drops it: the vehicle and its parts picked, and the carrier chosen,
+	// "auto" (left out) being the container if the vehicle's body fits it, else the pallet.
+	void SC_Setup(SC_Drop drop, SC_Gun gun = null)
+	{
+		m_SC_Drop = drop;
+		m_SC_Gun = gun;
+		m_SC_VehicleType = "";
+		m_SC_VehicleParts = "";
+		if (drop && drop.vehicle && drop.vehicle.type != "")
+		{
+			m_SC_VehicleType = SC_Settings.Choose(drop.vehicle.type);
+			foreach (SC_Item a : drop.vehicle.attachments)
+			{
+				for (int i = 0; i < SC_Settings.Count(a); i++)
+				{
+					if (m_SC_VehicleParts != "")
+						m_SC_VehicleParts += ";";
+					m_SC_VehicleParts += SC_Settings.Choose(a.type);
+				}
+			}
+		}
+
+		string carrier = "";
+		if (drop)
+			carrier = drop.carrier;
+		carrier.ToLower();
+		m_SC_Carrier = CARRIER_CONTAINER;
+		if (carrier == "pallet")
+			m_SC_Carrier = CARRIER_PALLET;
+		else if (carrier != "container" && m_SC_VehicleType != "" && !SC_Pallet.FitsContainer(m_SC_VehicleType))
+			m_SC_Carrier = CARRIER_PALLET;
+		if (m_SC_Carrier == CARRIER_CONTAINER)
+			m_SC_Colour = SC_Settings.PickColour();
+		SetSynchDirty();
+		if (m_SC_Carrier == CARRIER_PALLET && m_SC_VehicleType != "")
+			SC_CreateRide();
+		Print("[ShippingCrate] dropping " + m_SC_VehicleType + " (body " + SC_Pallet.Size(m_SC_VehicleType) + ") by " + SC_CarrierName());
+	}
+
+	string SC_CarrierName()
+	{
+		if (m_SC_Carrier == CARRIER_PALLET)
+			return "pallet";
+		return "container";
+	}
+
 	void SC_SetColour(int colour)
 	{
 		m_SC_Colour = colour;
 		SetSynchDirty();
 	}
 
-	// no loot in the crate, no infected around it, whatever the mission or container settings say
+	// no loot in the crate, no infected around it, whatever the mission or container settings say;
+	// falling fallSpeedScale times as fast as Expansion would have it
 	override void Expansion_InitAirdrop(array<ref ExpansionLoot> Loot, TStringArray infected, int ItemCount, int infectedCount, float fallSpeed = 4.5, float windImpact = 0.0)
 	{
-		super.Expansion_InitAirdrop(new array<ref ExpansionLoot>(), new TStringArray(), 0, 0, fallSpeed, windImpact);
+		super.Expansion_InitAirdrop(new array<ref ExpansionLoot>(), new TStringArray(), 0, 0, fallSpeed * SC_Settings.Get().fallSpeedScale, windImpact);
 	}
 
 	// Expansion divides by dt while the crate falls; two updates in one server tick make it 0
@@ -452,6 +610,64 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		if (dt <= 0)
 			return;
 		super.Expansion_OnUpdate(dt);
+		if (m_SC_Ride && !m_SC_Delivered)
+			SC_PlaceRide();
+	}
+
+	// the crate's own vehicle doesn't count as hitting something (that would pop its parachute)
+	override bool Expansion_CanCollideWith(Object obj)
+	{
+		if (obj && obj == m_SC_Ride)
+			return false;
+		return super.Expansion_CanCollideWith(obj);
+	}
+
+	// A pallet's vehicle rides down for real: made now, fitted, the gun kit in its cargo, gravity
+	// off and its body asleep; SC_PlaceRide keeps it on the falling deck, and on landing it's
+	// set on the real one and let go. Clients see the actual vehicle all the way down.
+	protected void SC_CreateRide()
+	{
+		EntityAI ride = EntityAI.Cast(g_Game.CreateObjectEx(m_SC_VehicleType, GetPosition() + "0 3 0", ECE_CREATEPHYSICS));
+		if (!ride)
+		{
+			Print("[ShippingCrate] could not create " + m_SC_VehicleType + " to ride down");
+			return;
+		}
+		dBodyEnableGravity(ride, false);
+		dBodyActive(ride, ActiveState.INACTIVE);
+		if (m_SC_Drop && m_SC_Drop.vehicle)
+			SC_Spawn.Fill(ride, m_SC_Drop.vehicle, true);
+		if (m_SC_Gun)
+		{
+			SC_Item kit = new SC_Item();
+			kit.cargo = m_SC_Gun.cargo;
+			SC_Spawn.Fill(ride, kit, true);
+		}
+		ride.SetLifetime(SC_Spawn.VEHICLE_LIFETIME);
+		m_SC_Ride = ride;
+		ride.GetNetworkID(m_SC_RideLow, m_SC_RideHigh);
+		SetSynchDirty();
+		SC_PlaceRide();
+	}
+
+	// the ride on the falling deck: the same frame clients draw the deck in
+	protected void SC_PlaceRide()
+	{
+		vector crate[2];
+		SC_Spawn.Bounds(this, crate);
+		vector crateBottom = Vector((crate[0][0] + crate[1][0]) * 0.5, crate[0][1], (crate[0][2] + crate[1][2]) * 0.5);
+		vector f[4];
+		GetTransform(f);
+		f[3] = ModelToWorld(crateBottom);
+		int nx;
+		int nz;
+		vector deck[2];
+		SC_Pallet.Layout(m_SC_VehicleType, nx, nz, deck);
+		SC_Pallet.FromCrate(f, deck, false);
+		vector mat[4];
+		SC_Pallet.VehicleTransform(f, m_SC_VehicleType, deck, 0.05, mat);
+		m_SC_Ride.SetTransform(mat);
+		dBodyActive(m_SC_Ride, ActiveState.INACTIVE);
 	}
 
 	override void Expansion_DiscardParachute()
@@ -465,7 +681,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		}
 	}
 
-	// once the crate has stopped moving (or after 10 s), the container takes its place
+	// once the crate has stopped moving (or after 10 s), the carrier takes its place
 	protected void SC_WaitForRest()
 	{
 		if (m_SC_Delivered)
@@ -482,13 +698,15 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		if (!drop && m_SC_Mission)
 			drop = m_SC_Mission.m_SC_Drop;
 		if (!drop)
+		{
 			drop = SC_Settings.Pick();
-		int colour = m_SC_Colour;
-		if (colour == 0)
-			colour = SC_Settings.PickColour();
+			SC_Setup(drop, SC_Settings.PickGun());
+		}
 
 		vector pos = GetPosition();
 		float yaw = GetOrientation()[0];
+		vector rest[4];
+		GetTransform(rest);   // the pallet lines up with the crate's own z axis (see GroundFrame)
 
 		// out of the way first: the vehicle goes where the crate is
 		Expansion_DisableUpdate();
@@ -501,15 +719,51 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		parked[1] = g_Game.SurfaceY(pos[0], pos[2]) - PARK_DEPTH;
 		SetPosition(parked);
 
-		m_SC_Box = SC_Spawn.PlaceContainer(colour, pos, yaw, SC_Settings.Get().openDoors);
-		int loaded = SC_Spawn.Load(m_SC_Box, drop);
+		int loaded = 0;
+		if (m_SC_Carrier == CARRIER_PALLET)
+		{
+			vector deck[2];
+			vector pf[4];
+			loaded = SC_Spawn.LoadPallet(drop, m_SC_VehicleType, m_SC_Gun, m_SC_Ride, pos, rest[2], m_SC_Parts, pf, deck);
+			m_SC_Ride = null;   // landed: an ordinary vehicle now
+			m_SC_RideLow = 0;
+			m_SC_RideHigh = 0;
+			SetSynchDirty();
+			SC_SetFrame(pf);
+			m_SC_Min = deck[0];
+			m_SC_Max = deck[1];
+			m_SC_Max[1] = deck[1][1] + SC_Pallet.Size(m_SC_VehicleType)[1] + 0.5;
+			m_SC_BlastY = deck[1][1] + 0.8;
+		}
+		else
+		{
+			int colour = m_SC_Colour;
+			if (colour == 0)
+				colour = SC_Settings.PickColour();
+			m_SC_Box = SC_Spawn.PlaceContainer(colour, pos, yaw, SC_Settings.Get().openDoors);
+			if (m_SC_Box)
+			{
+				m_SC_Parts.Insert(m_SC_Box);
+				vector bf[4];
+				m_SC_Box.GetTransform(bf);
+				SC_SetFrame(bf);
+				vector mm[2];
+				SC_Spawn.Bounds(m_SC_Box, mm);
+				m_SC_Min = mm[0];
+				m_SC_Max = mm[1];
+				m_SC_BlastY = mm[1][1] + 0.2;
+			}
+			loaded = SC_Spawn.Load(m_SC_Box, drop, m_SC_VehicleType, m_SC_Gun);
+		}
 		string dropName = "nothing";
 		if (drop)
 			dropName = drop.name;
-		Print("[ShippingCrate] container landed at " + pos + " with " + dropName + " (" + loaded + " things)");
+		if (m_SC_Gun)
+			dropName += " + " + m_SC_Gun.name;
+		Print("[ShippingCrate] " + SC_CarrierName() + " landed at " + pos + " with " + dropName + " (" + loaded + " things)");
 
 		SC_Config cfg = SC_Settings.Get();
-		if (m_SC_Box && cfg.selfDestructMinutes > 0)
+		if (m_SC_Parts.Count() > 0 && cfg.selfDestructMinutes > 0)
 		{
 			int warnAt = cfg.selfDestructMinutes * 60000;
 			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Warn, warnAt, false);
@@ -527,38 +781,65 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(SC_Blast);
 	}
 
+	// member arrays can't be passed as out parameters: copied in from a local one
+	protected void SC_SetFrame(vector f[4])
+	{
+		m_SC_Frame[0] = f[0];
+		m_SC_Frame[1] = f[1];
+		m_SC_Frame[2] = f[2];
+		m_SC_Frame[3] = f[3];
+	}
+
+	vector SC_FrameToWorld(vector p)
+	{
+		return m_SC_Frame[0] * p[0] + m_SC_Frame[1] * p[1] + m_SC_Frame[2] * p[2] + m_SC_Frame[3];
+	}
+
+	vector SC_WorldToFrame(vector w)
+	{
+		vector d = w - m_SC_Frame[3];
+		return Vector(vector.Dot(d, m_SC_Frame[0]), vector.Dot(d, m_SC_Frame[1]), vector.Dot(d, m_SC_Frame[2]));
+	}
+
+	vector SC_Centre()
+	{
+		if (m_SC_Parts.Count() == 0)
+			return GetPosition();
+		return SC_FrameToWorld((m_SC_Min + m_SC_Max) * 0.5);
+	}
+
 	// the teddy bear's eyes light up and it starts telling everyone to get out
 	void SC_Warn()
 	{
 		m_SC_Stage = 1;
 		SetSynchDirty();
-		Print("[ShippingCrate] container at " + SC_BoxCentre() + ": the bear is warning");
+		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + ": the bear is warning");
 	}
 
-	// C4 on the roof goes off (centre and both ends of the charges), then the container and
-	// everything in it are removed: this ends the Expansion mission and frees what it held
+	// C4 goes off (the middle and either side of it, along the carrier), then the carrier and
+	// everything on or in it are removed: this ends the Expansion mission and frees what it held
 	void SC_Detonate()
 	{
 		m_SC_Stage = 2;
 		SetSynchDirty();
-		if (!m_SC_Box)
+		if (m_SC_Mission)
+			m_SC_Mission.m_SC_Blown = true;
+		if (m_SC_Parts.Count() == 0)
 		{
 			g_Game.ObjectDelete(this);
 			return;
 		}
-		vector mm[2];
-		SC_Spawn.Bounds(m_SC_Box, mm);
 		int axis = 2;
-		if (mm[1][0] - mm[0][0] > mm[1][2] - mm[0][2])
+		if (m_SC_Max[0] - m_SC_Min[0] > m_SC_Max[2] - m_SC_Min[2])
 			axis = 0;
 		for (int i = -1; i <= 1; i++)
 		{
-			vector p = (mm[0] + mm[1]) * 0.5;
-			p[1] = mm[1][1] + 0.2;
+			vector p = (m_SC_Min + m_SC_Max) * 0.5;
+			p[1] = m_SC_BlastY;
 			p[axis] = p[axis] + i * 1.2;
-			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Blast, 150 * (i + 1), false, m_SC_Box.ModelToWorld(p));
+			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Blast, 150 * (i + 1), false, SC_FrameToWorld(p));
 		}
-		Print("[ShippingCrate] container at " + SC_BoxCentre() + " blew up");
+		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + " blew up");
 		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Remove, 2000, false);
 	}
 
@@ -567,43 +848,32 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		DamageSystem.ExplosionDamage(this, null, BLAST, at, DamageType.EXPLOSION);
 	}
 
-	// everything inside the container goes with it: vehicles and items (and whatever is in
-	// them), not people or animals
+	// everything in or on the carrier goes with it: vehicles and items (and whatever is in them),
+	// not people or animals
 	void SC_Remove()
 	{
 		int removed = 0;
-		if (m_SC_Box)
+		if (m_SC_Parts.Count() > 0)
 		{
-			vector mm[2];
-			SC_Lights.ClosedBounds(m_SC_Box, mm);
 			array<Object> objects = new array<Object>();
 			array<CargoBase> proxies = new array<CargoBase>();
-			g_Game.GetObjectsAtPosition(SC_BoxCentre(), vector.Distance(mm[0], mm[1]) * 0.5 + 1, objects, proxies);
+			g_Game.GetObjectsAtPosition(SC_Centre(), vector.Distance(m_SC_Min, m_SC_Max) * 0.5 + 1, objects, proxies);
 			foreach (Object obj : objects)
 			{
-				if (obj == m_SC_Box || obj == this || obj.IsMan() || obj.IsInherited(DayZCreature) || !obj.IsInherited(EntityAI))
+				if (obj == this || m_SC_Parts.Find(obj) >= 0 || obj.IsMan() || obj.IsInherited(DayZCreature) || !obj.IsInherited(EntityAI))
 					continue;
 				EntityAI e = EntityAI.Cast(obj);
 				if (e.GetHierarchyParent())
 					continue;
-				vector rel = m_SC_Box.WorldToModel(obj.GetPosition());
-				if (rel[0] < mm[0][0] - 0.2 || rel[0] > mm[1][0] + 0.2 || rel[1] < mm[0][1] - 0.5 || rel[1] > mm[1][1] + 0.5 || rel[2] < mm[0][2] - 0.2 || rel[2] > mm[1][2] + 0.2)
+				vector rel = SC_WorldToFrame(obj.GetPosition());
+				if (rel[0] < m_SC_Min[0] - 0.2 || rel[0] > m_SC_Max[0] + 0.2 || rel[1] < m_SC_Min[1] - 0.5 || rel[1] > m_SC_Max[1] + 0.5 || rel[2] < m_SC_Min[2] - 0.2 || rel[2] > m_SC_Max[2] + 0.2)
 					continue;
 				g_Game.ObjectDelete(obj);
 				removed++;
 			}
 		}
-		Print("[ShippingCrate] container at " + SC_BoxCentre() + " removed with " + removed + " things in it");
-		g_Game.ObjectDelete(this);   // EEDelete takes the container; the mission ends
-	}
-
-	vector SC_BoxCentre()
-	{
-		if (!m_SC_Box)
-			return GetPosition();
-		vector mm[2];
-		SC_Spawn.Bounds(m_SC_Box, mm);
-		return m_SC_Box.ModelToWorld((mm[0] + mm[1]) * 0.5);
+		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + " removed with " + removed + " things on or in it");
+		g_Game.ObjectDelete(this);   // EEDelete takes the carrier; the mission ends
 	}
 #endif
 
@@ -616,7 +886,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		m_SC_Following = false;
 	}
 
-	// the falling stand-ins: local container, parachutes, spotlight
+	// the falling stand-ins: local container or pallet and vehicle, parachutes, spotlight
 	protected void SC_DeleteLocals()
 	{
 		if (!g_Game)
@@ -625,18 +895,27 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		if (m_SC_Local)
 			g_Game.ObjectDelete(m_SC_Local);
 		m_SC_Local = null;
+		foreach (Object tile : m_SC_Tiles)
+		{
+			if (tile)
+				g_Game.ObjectDelete(tile);
+		}
+		m_SC_Tiles.Clear();
+		if (m_SC_LocalVehicle)
+			g_Game.ObjectDelete(m_SC_LocalVehicle);
+		m_SC_LocalVehicle = null;
 		SC_Lights.Destroy(m_SC_Spot);
 		m_SC_Spot = null;
 	}
 
 	protected void SC_DeleteChutes()
 	{
-		if (m_SC_ChuteA)
-			g_Game.ObjectDelete(m_SC_ChuteA);
-		if (m_SC_ChuteB)
-			g_Game.ObjectDelete(m_SC_ChuteB);
-		m_SC_ChuteA = null;
-		m_SC_ChuteB = null;
+		foreach (EntityAI chute : m_SC_Chutes)
+		{
+			if (chute)
+				g_Game.ObjectDelete(chute);
+		}
+		m_SC_Chutes.Clear();
 	}
 
 	protected EntityAI SC_CreateChute()
@@ -648,6 +927,15 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			chute.SetAnimationPhase("parachute", 0);
 		}
 		return chute;
+	}
+
+	// a local, collision-free copy of type
+	protected Object SC_CreateProp(string type, vector pos)
+	{
+		Object obj = g_Game.CreateObjectEx(type, pos, ECE_LOCAL);
+		if (obj)
+			dBodyDestroy(obj);
+		return obj;
 	}
 
 	// the real container the server put where the crate landed
@@ -666,19 +954,52 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		return null;
 	}
 
+	static vector SC_Dir(vector f[4], vector d)
+	{
+		return f[0] * d[0] + f[1] * d[1] + f[2] * d[2];
+	}
+
 	void SC_Follow(float dt)
 	{
 		m_SC_Time += dt;
 		SetAnimationPhase("camo", 1);
 		SetAnimationPhase("parachute", 1);
 
-		// landed: the server has put the real container up and parked the crate underground
-		// until the mission ends. The stand-ins go; the beacons move onto the real container.
+		// a pallet needs its vehicle's type, which comes from the server on request
+		if (m_SC_Carrier == CARRIER_PALLET && m_SC_VehicleType == "")
+		{
+			if (m_SC_Time >= m_SC_NextAsk)
+			{
+				m_SC_NextAsk = m_SC_Time + 3;
+				g_Game.RPCSingleParam(this, RPC_ASK, new Param1<int>(0), true, null);
+			}
+			return;
+		}
+
+		vector f[4];
+		vector mm[2];
+		vector deck[2];
+		int nx;
+		int nz;
+		if (m_SC_Carrier == CARRIER_PALLET)
+			SC_Pallet.Layout(m_SC_VehicleType, nx, nz, deck);
+
+		// landed: the server has put the real carrier down and parked the crate underground
+		// until the mission ends. The stand-ins go; beacons and decoration move onto the real one.
 		vector at = GetPosition();
 		if (m_Expansion_HasDiscardedParachute && at[1] < g_Game.SurfaceY(at[0], at[2]) - 1)
 		{
-			if (m_SC_Local)
+			if (m_SC_Local || m_SC_Tiles.Count() > 0)
 				SC_DeleteLocals();
+			if (m_SC_Carrier == CARRIER_PALLET)
+			{
+				vector crateMat[4];
+				GetTransform(crateMat);
+				SC_Pallet.GroundFrame(at, crateMat[2], f);
+				SC_Pallet.FromCrate(f, deck, true);
+				SC_Dress(f, deck, true);
+				return;
+			}
 			if (!m_SC_Landed && m_SC_Time >= m_SC_NextSearch)
 			{
 				m_SC_NextSearch = m_SC_Time + 0.5;
@@ -686,91 +1007,161 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			}
 			if (m_SC_Landed)
 			{
-				SC_UpdateBeacons(m_SC_Landed);
-				SC_UpdateDecor(m_SC_Landed);
+				m_SC_Landed.GetTransform(f);
+				SC_Lights.ClosedBounds(m_SC_Landed, mm);
+				SC_Dress(f, mm, false);
 			}
 			return;
 		}
 
-		if (m_SC_Colour == 0)
-			return;   // the colour hasn't arrived yet
-
-		if (!m_SC_Local)
-		{
-			m_SC_Local = g_Game.CreateObjectEx(SC_Settings.ContainerType(m_SC_Colour), GetPosition(), ECE_LOCAL);
-			if (!m_SC_Local)
-				return;
-		}
-
-		if (m_Expansion_HasDiscardedParachute)
-			SC_DeleteChutes();
-		else if (!m_SC_ChuteA)
-		{
-			m_SC_ChuteA = SC_CreateChute();
-			m_SC_ChuteB = SC_CreateChute();
-		}
-
-		// the container: centred on the crate, bottoms level
+		// falling: the carrier hangs with its bottom level with the crate's, centred on it
 		vector crate[2];
 		SC_Spawn.Bounds(this, crate);
-		vector box[2];
-		SC_Spawn.Bounds(m_SC_Local, box);
 		vector crateBottom = Vector((crate[0][0] + crate[1][0]) * 0.5, crate[0][1], (crate[0][2] + crate[1][2]) * 0.5);
-		vector boxBottom = Vector((box[0][0] + box[1][0]) * 0.5, box[0][1], (box[0][2] + box[1][2]) * 0.5);
+		GetTransform(f);
+		float chuteTop;
+		int chuteCount = 2;
 
-		vector mat[4];
-		GetTransform(mat);
-		mat[3] = ModelToWorld(crateBottom) - VectorToParent(boxBottom);
-		m_SC_Local.SetTransform(mat);
+		if (m_SC_Carrier == CARRIER_PALLET)
+		{
+			f[3] = ModelToWorld(crateBottom);
+			SC_Pallet.FromCrate(f, deck, false);   // the crate is under the deck's free end
+			SC_FollowPallet(f, nx, nz, deck);
+			mm[0] = deck[0];
+			mm[1] = deck[1];
+			chuteTop = deck[1][1] + SC_Pallet.Size(m_SC_VehicleType)[1] + 0.2;
+			chuteCount = Math.Clamp(Math.Round((deck[1][2] - deck[0][2]) / 4.5), 2, 6);
+		}
+		else
+		{
+			if (m_SC_Colour == 0)
+				return;   // the colour hasn't arrived yet
+			if (!m_SC_Local)
+			{
+				m_SC_Local = g_Game.CreateObjectEx(SC_Settings.ContainerType(m_SC_Colour), GetPosition(), ECE_LOCAL);
+				if (!m_SC_Local)
+					return;
+			}
+			SC_Lights.ClosedBounds(m_SC_Local, mm);
+			vector boxBottom = Vector((mm[0][0] + mm[1][0]) * 0.5, mm[0][1], (mm[0][2] + mm[1][2]) * 0.5);
+			f[3] = ModelToWorld(crateBottom) - VectorToParent(boxBottom);
+			m_SC_Local.SetTransform(f);
+			chuteTop = mm[1][1];
+		}
 
 		// the spotlight, just under the floor, straight down
+		vector under = (mm[0] + mm[1]) * 0.5;
+		under[1] = mm[0][1] - 0.3;
 		if (!m_SC_Spot)
-			m_SC_Spot = SC_Lights.Create(SC_GroundSpot, mat[3]);
+			m_SC_Spot = SC_Lights.Create(SC_GroundSpot, f[3]);
 		if (m_SC_Spot)
 		{
-			m_SC_Spot.SetPosition(m_SC_Local.ModelToWorld(boxBottom - "0 0.3 0"));
+			m_SC_Spot.SetPosition(SC_Pallet.ToWorld(f, under));
 			m_SC_Spot.SetOrientation(SC_Lights.Aim("0 -1 0"));
 		}
 
-		SC_UpdateBeacons(m_SC_Local);
-		SC_UpdateDecor(m_SC_Local);
+		SC_Dress(f, mm, m_SC_Carrier == CARRIER_PALLET);
 
-		if (!m_SC_ChuteA)
-			return;
+		if (m_Expansion_HasDiscardedParachute)
+			SC_DeleteChutes();
+		else
+			SC_UpdateChutes(f, mm, chuteTop, chuteCount);
+	}
 
-		// the parachutes: one over each end of the roof
-		int axis = 2;
-		if (box[1][0] - box[0][0] > box[1][2] - box[0][2])
-			axis = 0;
-		float half = (box[1][axis] - box[0][axis]) * 0.5;
-		vector chute[2];
-		SC_Spawn.Bounds(m_SC_ChuteA, chute);
-		vector chuteBottom = Vector((chute[0][0] + chute[1][0]) * 0.5, chute[0][1], (chute[0][2] + chute[1][2]) * 0.5);
-
-		for (int i = 0; i < 2; i++)
+	// the falling pallet: its tiles and the vehicle on it, in frame f
+	protected void SC_FollowPallet(vector f[4], int nx, int nz, vector deck[2])
+	{
+		if (m_SC_Tiles.Count() == 0)
 		{
-			float side = 1;
-			EntityAI c = m_SC_ChuteA;
-			if (i == 1)
+			for (int k = 0; k < nx * nz; k++)
+				m_SC_Tiles.Insert(SC_CreateProp(SC_Pallet.TILE, GetPosition()));
+			// no stand-in for the vehicle: the real one rides down (the server carries it)
+		}
+		vector mat[4];
+		for (int i = 0; i < nx; i++)
+		{
+			for (int j = 0; j < nz; j++)
 			{
-				side = -1;
-				c = m_SC_ChuteB;
+				Object tile = m_SC_Tiles[i * nz + j];
+				if (!tile)
+					continue;
+				SC_Pallet.TileTransform(f, i, j, deck, mat);
+				tile.SetTransform(mat);
 			}
-			vector roof = (box[0] + box[1]) * 0.5;
-			roof[1] = box[1][1];
-			roof[axis] = roof[axis] + side * half * 0.6;
-			mat[3] = m_SC_Local.ModelToWorld(roof) - VectorToParent(chuteBottom);
-			c.SetTransform(mat);
+		}
+		if (m_SC_LocalVehicle)
+		{
+			SC_Pallet.VehicleTransform(f, m_SC_VehicleType, deck, 0, mat);
+			m_SC_LocalVehicle.SetTransform(mat);
+		}
+
+		// the real vehicle riding down: the server carries it with its body asleep, and those
+		// moves never reach us, so hold it on the deck here too (the same place the server has it)
+		if (m_SC_RideLow != 0 || m_SC_RideHigh != 0)
+		{
+			Object ride = g_Game.GetObjectByNetworkId(m_SC_RideLow, m_SC_RideHigh);
+			if (ride)
+			{
+				SC_Pallet.VehicleTransform(f, m_SC_VehicleType, deck, 0.05, mat);
+				ride.SetTransform(mat);
+			}
 		}
 	}
 
-	// a local, collision-free copy of type
-	protected Object SC_CreateProp(string type, vector pos)
+	// count parachutes in a row along the carrier, chuteTop above its frame's origin; the end
+	// ones lean CHUTE_TILT away from the middle, the ones between proportionally less
+	protected void SC_UpdateChutes(vector f[4], vector mm[2], float chuteTop, int count)
 	{
-		Object obj = g_Game.CreateObjectEx(type, pos, ECE_LOCAL);
-		if (obj)
-			dBodyDestroy(obj);
-		return obj;
+		if (m_SC_Chutes.Count() != count)
+		{
+			SC_DeleteChutes();
+			for (int k = 0; k < count; k++)
+				m_SC_Chutes.Insert(SC_CreateChute());
+		}
+		if (!m_SC_Chutes[0])
+			return;
+		int axis = 2;
+		if (mm[1][0] - mm[0][0] > mm[1][2] - mm[0][2])
+			axis = 0;
+		float reach = (mm[1][axis] - mm[0][axis]) * 0.5 * CHUTE_SPREAD;
+		vector chute[2];
+		SC_Spawn.Bounds(m_SC_Chutes[0], chute);
+		vector chuteBottom = Vector((chute[0][0] + chute[1][0]) * 0.5, chute[0][1], (chute[0][2] + chute[1][2]) * 0.5);
+
+		for (int i = 0; i < count; i++)
+		{
+			EntityAI c = m_SC_Chutes[i];
+			if (!c)
+				continue;
+			float share = (i / (count - 1.0)) * 2 - 1;   // -1 .. 1 along the carrier
+			float tilt = CHUTE_TILT * share * Math.DEG2RAD;
+			float tc = Math.Cos(tilt);
+			float ts = Math.Sin(tilt);
+			vector cmat[4];
+			cmat[0] = f[0];
+			cmat[1] = f[1];
+			cmat[2] = f[2];
+			vector up = f[1];
+			vector along = f[axis];
+			cmat[1] = up * tc + along * ts;
+			cmat[axis] = along * tc - up * ts;
+			vector top = (mm[0] + mm[1]) * 0.5;
+			top[1] = chuteTop;
+			top[axis] = top[axis] + share * reach;
+			vector attach = cmat[0] * chuteBottom[0] + cmat[1] * chuteBottom[1] + cmat[2] * chuteBottom[2];
+			cmat[3] = SC_Pallet.ToWorld(f, top) - attach;
+			c.SetTransform(cmat);
+		}
+	}
+
+	// the beacons and the decoration, on a container's roof or a pallet's deck
+	protected void SC_Dress(vector f[4], vector mm[2], bool pallet)
+	{
+		float crossOffset = 0;
+		if (pallet)
+			crossOffset = (mm[1][0] - mm[0][0]) * 0.5 - 0.3;   // the deck's corners, clear of the vehicle
+		SC_UpdateBeacons(f, mm, crossOffset);
+		SC_UpdateDecor(f, mm, pallet);
 	}
 
 	protected void SC_DeleteDecor()
@@ -785,30 +1176,20 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		m_SC_Charges.Clear();
 		if (m_SC_Bear)
 			g_Game.ObjectDelete(m_SC_Bear);
-		if (m_SC_EyeL)
-			g_Game.ObjectDelete(m_SC_EyeL);
-		if (m_SC_EyeR)
-			g_Game.ObjectDelete(m_SC_EyeR);
 		m_SC_Bear = null;
-		m_SC_EyeL = null;
-		m_SC_EyeR = null;
-		SC_Lights.Destroy(m_SC_EyeLightL);
-		SC_Lights.Destroy(m_SC_EyeLightR);
-		m_SC_EyeLightL = null;
-		m_SC_EyeLightR = null;
+		SC_DeleteEyes();
 	}
 
-	// On the middle of box's roof: a 4 x 2 grid of IEDs with a teddy bear sitting on top. In its
-	// last minute the bear's eyes glow red and it calls out "Evacuate!" every 3 s.
-	protected void SC_UpdateDecor(Object box)
+	// A stack of IEDs with a teddy bear sitting on top: in the middle of a container's roof, or at
+	// the free end of a pallet (tall enough that a slope doesn't bury it). In its last minute the
+	// bear's eyes glow red and it calls out "Evacuate!" every 3 s.
+	protected void SC_UpdateDecor(vector f[4], vector mm[2], bool pallet)
 	{
 		if (m_SC_Stage >= 2)
 		{
 			SC_DeleteDecor();
 			return;
 		}
-		vector mm[2];
-		SC_Lights.ClosedBounds(box, mm);
 		int axis = 2;
 		int cross = 0;
 		if (mm[1][0] - mm[0][0] > mm[1][2] - mm[0][2])
@@ -816,131 +1197,172 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			axis = 0;
 			cross = 2;
 		}
-		vector mat[4];
-		box.GetTransform(mat);
+		vector base = (mm[0] + mm[1]) * 0.5;
+		base[1] = mm[1][1];
+		if (pallet)
+			base[axis] = mm[1][axis] - 0.45;   // the free end's edge
 
 		if (m_SC_Charges.Count() == 0)
 		{
 			for (int c = 0; c < 8; c++)
-				m_SC_Charges.Insert(SC_CreateProp(CHARGE, box.GetPosition()));
-			m_SC_Bear = SC_CreateProp(BEAR, box.GetPosition());
+				m_SC_Charges.Insert(SC_CreateProp(CHARGE, f[3]));
+			m_SC_Bear = SC_CreateProp(BEAR, f[3]);
 		}
 
-		// the charges, end to end along the roof, two rows
+		vector mat[4];
+		mat[0] = f[0];
+		mat[1] = f[1];
+		mat[2] = f[2];
+
 		vector cm[2];
 		cm[0] = "-0.15 0 -0.15";
 		cm[1] = "0.15 0.15 0.15";
 		if (m_SC_Charges[0])
 			SC_Spawn.Bounds(m_SC_Charges[0], cm);
-		float stepAlong = (cm[1][axis] - cm[0][axis]) * 1.15;
-		float stepAcross = (cm[1][cross] - cm[0][cross]) * 1.15;
+		// the charges stacked straight up, every other one turned a quarter, like a pile of bricks
+		float layer = cm[1][1] - cm[0][1];
 		vector charge = Vector((cm[0][0] + cm[1][0]) * 0.5, cm[0][1], (cm[0][2] + cm[1][2]) * 0.5);   // its bottom centre
 		for (int i = 0; i < m_SC_Charges.Count(); i++)
 		{
 			Object obj = m_SC_Charges[i];
 			if (!obj)
 				continue;
-			int col = i % 4;
-			int row = i / 4;
-			float along = col - 1.5;
-			float across = row - 0.5;
-			vector p = (mm[0] + mm[1]) * 0.5;
-			p[1] = mm[1][1];
-			p[axis] = p[axis] + along * stepAlong;
-			p[cross] = p[cross] + across * stepAcross;
-			mat[3] = box.ModelToWorld(p) - box.VectorToParent(charge);
-			obj.SetTransform(mat);
+			vector cmat[4];
+			cmat[0] = f[0];
+			cmat[1] = f[1];
+			cmat[2] = f[2];
+			if (i % 2 == 1)
+			{
+				cmat[0] = -f[2];
+				cmat[2] = f[0];
+			}
+			vector p = base;
+			p[1] = base[1] + i * layer;
+			cmat[3] = SC_Pallet.ToWorld(f, p) - (cmat[0] * charge[0] + cmat[1] * charge[1] + cmat[2] * charge[2]);
+			obj.SetTransform(cmat);
 		}
 
-		// the bear sits on top of the middle, facing out the side
+		// the bear sits on top of the stack, facing across
 		if (!m_SC_Bear)
 			return;
 		vector bm[2];
 		SC_Spawn.Bounds(m_SC_Bear, bm);
-		vector top = (mm[0] + mm[1]) * 0.5;
-		top[1] = mm[1][1] + (cm[1][1] - cm[0][1]);
+		vector top = base;
+		top[1] = base[1] + m_SC_Charges.Count() * layer;
 		vector bearBottom = Vector((bm[0][0] + bm[1][0]) * 0.5, bm[0][1], (bm[0][2] + bm[1][2]) * 0.5);
 		vector bmat[4];
-		bmat[0] = mat[0];
-		bmat[1] = mat[1];
-		bmat[2] = mat[2];
-		if (axis == 2)
+		bmat[0] = f[0];
+		bmat[1] = f[1];
+		bmat[2] = f[2];
+		if (axis == 2 && !pallet)
 		{
 			// the long axis is z: turn the bear a quarter so it faces across the roof
-			bmat[0] = -mat[2];
-			bmat[2] = mat[0];
+			bmat[0] = -f[2];
+			bmat[2] = f[0];
 		}
-		bmat[3] = box.ModelToWorld(top) - (bmat[0] * bearBottom[0] + bmat[1] * bearBottom[1] + bmat[2] * bearBottom[2]);
+		bmat[3] = SC_Pallet.ToWorld(f, top) - (bmat[0] * bearBottom[0] + bmat[1] * bearBottom[1] + bmat[2] * bearBottom[2]);
 		m_SC_Bear.SetTransform(bmat);
 
 		if (!m_SC_LoggedDecor)
 		{
 			m_SC_LoggedDecor = true;
-			Print("[ShippingCrate] roof: charge size " + (cm[1] - cm[0]) + ", bear size " + (bm[1] - bm[0]));
+			Print("[ShippingCrate] decoration: charge size " + (cm[1] - cm[0]) + ", bear size " + (bm[1] - bm[0]) + ", on a " + SC_ClientCarrierName());
 		}
 
 		if (m_SC_Stage == 1)
 			SC_Warning(bm);
 	}
 
-	// the bear's red eyes (front of its head, about four fifths up) and its voice
+	string SC_ClientCarrierName()
+	{
+		if (m_SC_Carrier == CARRIER_PALLET)
+			return "pallet (" + m_SC_VehicleType + ")";
+		return "container";
+	}
+
+	// the bear's voice every VOICE_EVERY seconds, its eyes (front of its head, about four fifths
+	// up) glowing red only while it speaks
 	protected void SC_Warning(vector bm[2])
 	{
+		if (m_SC_Time >= m_SC_NextVoice)
+		{
+			m_SC_NextVoice = m_SC_Time + VOICE_EVERY;
+			m_SC_EyesUntil = m_SC_Time + EYES_ON;
+			SEffectManager.PlaySound(EVACUATE_SOUND, m_SC_Bear.GetPosition());
+		}
+
+		if (m_SC_Time >= m_SC_EyesUntil)
+		{
+			SC_DeleteEyes();
+			return;
+		}
+
 		float h = bm[1][1] - bm[0][1];
 		float w = bm[1][0] - bm[0][0];
 		float eyeY = bm[0][1] + h * 0.8;
-		float eyeZ = bm[1][2] - (bm[1][2] - bm[0][2]) * 0.1;
+		float eyeZ = bm[1][2] - (bm[1][2] - bm[0][2]) * 0.1 - EYES_BACK;   // the head is behind the paws
 		float midX = (bm[0][0] + bm[1][0]) * 0.5;
 		vector left = m_SC_Bear.ModelToWorld(Vector(midX - w * 0.12, eyeY, eyeZ));
 		vector right = m_SC_Bear.ModelToWorld(Vector(midX + w * 0.12, eyeY, eyeZ));
-
 		if (!m_SC_EyeL)
 		{
-			m_SC_EyeL = SC_Lights.CreateNavMarker("SC_Prop_GlowRed", SC_Lights.NAV_RED, "#(argb,8,8,3)color(1,0,0,1,CO)", left);
-			m_SC_EyeR = SC_Lights.CreateNavMarker("SC_Prop_GlowRed", SC_Lights.NAV_RED, "#(argb,8,8,3)color(1,0,0,1,CO)", right);
-			m_SC_EyeLightL = SC_Lights.Create(SC_EyeLight, left);
-			m_SC_EyeLightR = SC_Lights.Create(SC_EyeLight, right);
-			m_SC_NextVoice = m_SC_Time;
+			m_SC_EyeL = SC_CreateProp(EYE, left);
+			m_SC_EyeR = SC_CreateProp(EYE, right);
 		}
+		// a plum scaled down to EYE_SIZE across, centred on each eye
+		float eyeScale = 0.4;
+		vector em[2];
+		if (m_SC_EyeL)
+		{
+			SC_Spawn.Bounds(m_SC_EyeL, em);
+			float across = Math.Max(em[1][0] - em[0][0], 0.01);
+			eyeScale = EYE_SIZE / across;
+		}
+		vector eyeCentre = (em[0] + em[1]) * 0.5 * eyeScale;
 		vector mat[4];
 		m_SC_Bear.GetTransform(mat);
 		if (m_SC_EyeL)
 		{
-			mat[3] = left;
+			mat[3] = left - (mat[0] * eyeCentre[0] + mat[1] * eyeCentre[1] + mat[2] * eyeCentre[2]);
 			m_SC_EyeL.SetTransform(mat);
-			m_SC_EyeL.SetScale(0.12);
+			m_SC_EyeL.SetScale(eyeScale);
 		}
 		if (m_SC_EyeR)
 		{
-			mat[3] = right;
+			mat[3] = right - (mat[0] * eyeCentre[0] + mat[1] * eyeCentre[1] + mat[2] * eyeCentre[2]);
 			m_SC_EyeR.SetTransform(mat);
-			m_SC_EyeR.SetScale(0.12);
-		}
-		if (m_SC_EyeLightL)
-			m_SC_EyeLightL.SetPosition(left + m_SC_Bear.VectorToParent("0 0 0.05"));
-		if (m_SC_EyeLightR)
-			m_SC_EyeLightR.SetPosition(right + m_SC_Bear.VectorToParent("0 0 0.05"));
-
-		if (m_SC_Time >= m_SC_NextVoice)
-		{
-			m_SC_NextVoice = m_SC_Time + VOICE_EVERY;
-			SEffectManager.PlaySound(EVACUATE_SOUND, m_SC_Bear.GetPosition());
+			m_SC_EyeR.SetScale(eyeScale);
 		}
 	}
 
-	// at each end of box's roof a runway edge light whose lamp is a rotating orange beacon, the
-	// two half a turn apart
-	protected void SC_UpdateBeacons(Object box)
+	protected void SC_DeleteEyes()
 	{
-		vector mm[2];
-		SC_Lights.ClosedBounds(box, mm);
+		if (m_SC_EyeL)
+			g_Game.ObjectDelete(m_SC_EyeL);
+		if (m_SC_EyeR)
+			g_Game.ObjectDelete(m_SC_EyeR);
+		m_SC_EyeL = null;
+		m_SC_EyeR = null;
+	}
+
+	// at each end of the carrier a runway edge light whose lamp is a rotating orange beacon, the
+	// two half a turn apart; crossOffset moves them sideways, in opposite directions (a pallet's
+	// diagonal corners, clear of the vehicle)
+	protected void SC_UpdateBeacons(vector f[4], vector mm[2], float crossOffset)
+	{
 		int axis = 2;
+		int cross = 0;
 		if (mm[1][0] - mm[0][0] > mm[1][2] - mm[0][2])
+		{
 			axis = 0;
+			cross = 2;
+		}
 		float half = (mm[1][axis] - mm[0][axis]) * 0.5;
 
 		vector mat[4];
-		box.GetTransform(mat);
+		mat[0] = f[0];
+		mat[1] = f[1];
+		mat[2] = f[2];
 
 		for (int i = 0; i < 2; i++)
 		{
@@ -957,7 +1379,8 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			vector roof = (mm[0] + mm[1]) * 0.5;
 			roof[1] = mm[1][1];
 			roof[axis] = roof[axis] + side * (half - 0.4);
-			vector world = box.ModelToWorld(roof);
+			roof[cross] = roof[cross] + side * crossOffset;
+			vector world = SC_Pallet.ToWorld(f, roof);
 
 			if (!post)
 			{
@@ -975,17 +1398,15 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 				}
 			}
 
-			// the post stands on the roof, upright with the container; its lamp is near the top
-			vector lamp = world + box.VectorToParent("0 0.6 0");
+			// the post stands upright with the carrier; its lamp is the middle of the dome, the
+			// top quarter of the post
+			vector lamp = world + SC_Dir(f, "0 0.6 0");
 			if (post)
 			{
 				vector pm[2];
 				SC_Spawn.Bounds(post, pm);
-				mat[3] = world - box.VectorToParent(Vector((pm[0][0] + pm[1][0]) * 0.5, pm[0][1], (pm[0][2] + pm[1][2]) * 0.5));
+				mat[3] = world - SC_Dir(f, Vector((pm[0][0] + pm[1][0]) * 0.5, pm[0][1], (pm[0][2] + pm[1][2]) * 0.5));
 				post.SetTransform(mat);
-				lamp = post.ModelToWorld(Vector((pm[0][0] + pm[1][0]) * 0.5, pm[1][1] - 0.1, (pm[0][2] + pm[1][2]) * 0.5));
-
-				// the lamp: the middle of the dome, the top quarter of the post
 				float domeHeight = (pm[1][1] - pm[0][1]) * SC_Lights.LAMP_SHARE;
 				lamp = post.ModelToWorld(Vector((pm[0][0] + pm[1][0]) * 0.5, pm[1][1] - domeHeight * 0.5, (pm[0][2] + pm[1][2]) * 0.5));
 			}

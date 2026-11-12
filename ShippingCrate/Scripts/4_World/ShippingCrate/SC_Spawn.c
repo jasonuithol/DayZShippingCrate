@@ -1,19 +1,22 @@
-// Puts the shipping container on the ground and loads it: the vehicle parked inside with its
-// nose to the doors, loose items on the floor behind it.
+// Puts the carrier on the ground and loads it: the shipping container with the vehicle parked
+// inside, nose to the doors, and loose items on the floor behind it; or the pallet deck with the
+// vehicle at one end, nose out, and the loose items on the free end. Both are worked in a frame:
+// the carrier's transform (rows across/up/along, origin) and its bounds in that space.
 class SC_Spawn
 {
 	static const float VEHICLE_LIFETIME = 3888000; // 45 days, same as vanilla vehicles
 	static const float WALL = 0.25;                // keep this far from the inside of the walls
 	static const float GAP = 0.3;                  // between the vehicle and the doors / the items
 
-	// Long axis, door end and inside floor of a placed container, in its model space.
+	// Long axis, door end and floor of the carrier, in its frame.
+	vector m_Frame[4];
+	float m_Yaw;
 	vector m_Min;
 	vector m_Max;
 	int m_Axis;          // 0 = x, 2 = z
 	int m_Cross;
 	float m_DoorSign;    // +1 / -1: which end of m_Axis has the doors
 	float m_FloorY;      // model space
-	Building m_Box;
 
 	// The container at pos (on the ground) facing yaw, doors unlocked.
 	static Building PlaceContainer(int colour, vector pos, float yaw, bool openDoors)
@@ -48,19 +51,79 @@ class SC_Spawn
 	}
 
 	// Loads the container. Returns how many things were created (vehicle + items, not counting
-	// what is on and in them).
-	static int Load(Building box, SC_Drop drop)
+	// what is on and in them). vehicleType: the drop's vehicle, already picked.
+	static int Load(Building box, SC_Drop drop, string vehicleType, SC_Gun gun)
 	{
 		if (!box || !drop)
 			return 0;
 		SC_Spawn s = new SC_Spawn();
 		s.Measure(box);
-		return s.LoadDrop(drop);
+		return s.LoadDrop(drop, vehicleType, gun);
+	}
+
+	// The pallet deck at pos facing yaw: its tiles (returned, for the self-destruct to remove),
+	// then the vehicle and the items on it.
+	// ride: the vehicle that came down on the pallet, already fitted and loaded (else one is made)
+	static int LoadPallet(SC_Drop drop, string vehicleType, SC_Gun gun, EntityAI ride, vector pos, vector forward, array<Object> tiles, out vector frame[4], out vector deck[2])
+	{
+		int nx;
+		int nz;
+		SC_Pallet.Layout(vehicleType, nx, nz, deck);
+		SC_Pallet.GroundFrame(pos, forward, frame);
+		SC_Pallet.FromCrate(frame, deck, true);
+		for (int i = 0; i < nx; i++)
+		{
+			for (int j = 0; j < nz; j++)
+			{
+				vector mat[4];
+				SC_Pallet.TileTransform(frame, i, j, deck, mat);
+				Object tile = g_Game.CreateObjectEx(SC_Pallet.TILE, mat[3], ECE_CREATEPHYSICS | ECE_UPDATEPATHGRAPH | ECE_NOLIFETIME);
+				if (!tile)
+					continue;
+				tile.SetTransform(mat);
+				tiles.Insert(tile);
+			}
+		}
+		SC_Spawn s = new SC_Spawn();
+		s.m_Frame[0] = frame[0];
+		s.m_Frame[1] = frame[1];
+		s.m_Frame[2] = frame[2];
+		s.m_Frame[3] = frame[3];
+		s.m_Yaw = frame[2].VectorToAngles()[0];
+		s.m_Min = deck[0];
+		s.m_Max = deck[1];
+		s.m_Axis = 2;
+		s.m_Cross = 0;
+		s.m_DoorSign = -1;       // the vehicle's nose towards -z, the free end +z
+		s.m_FloorY = deck[1][1];
+		s.m_OnPallet = true;
+		s.m_Ride = ride;
+		Print("[ShippingCrate] pallet " + nx + " x " + nz + " (" + (deck[1] - deck[0]) + ") for " + vehicleType);
+		return s.LoadDrop(drop, vehicleType, gun);
+	}
+
+	bool m_OnPallet;
+	EntityAI m_Ride;   // a vehicle that already exists, fitted and loaded: just put it in place
+
+	vector ToWorld(vector p)
+	{
+		return m_Frame[0] * p[0] + m_Frame[1] * p[1] + m_Frame[2] * p[2] + m_Frame[3];
+	}
+
+	vector Dir(vector d)
+	{
+		return m_Frame[0] * d[0] + m_Frame[1] * d[1] + m_Frame[2] * d[2];
 	}
 
 	void Measure(Building box)
 	{
-		m_Box = box;
+		vector bf[4];
+		box.GetTransform(bf);   // not straight into m_Frame: member arrays can't be out parameters
+		m_Frame[0] = bf[0];
+		m_Frame[1] = bf[1];
+		m_Frame[2] = bf[2];
+		m_Frame[3] = bf[3];
+		m_Yaw = box.GetOrientation()[0];
 		vector mm[2];
 		Bounds(box, mm);
 		m_Min = mm[0];
@@ -126,18 +189,28 @@ class SC_Spawn
 		return (m_Max[m_Cross] - m_Min[m_Cross]) * 0.5 - WALL;
 	}
 
-	int LoadDrop(SC_Drop drop)
+	// the vehicle (with the gun kit in its boot) and the loose items
+	int LoadDrop(SC_Drop drop, string vehicleType, SC_Gun gun)
 	{
 		int created = 0;
 		float itemsFrom = -HalfLength();   // the back wall
 		float itemsTo = HalfLength();      // the doors, unless a vehicle is parked there
 
-		if (drop.vehicle && drop.vehicle.type != "")
+		if (drop.vehicle && vehicleType != "")
 		{
-			EntityAI vehicle = Vehicle(drop.vehicle);
+			EntityAI vehicle = Vehicle(drop.vehicle, vehicleType);
 			if (vehicle)
 			{
 				created++;
+				if (m_Ride)
+					gun = null;   // it came down with the kit already in it
+				if (gun)
+				{
+					SC_Item kit = new SC_Item();
+					kit.cargo = gun.cargo;
+					Fill(vehicle, kit, true);
+					gun = null;   // stowed
+				}
 				itemsTo = HalfLength() - GAP - VehicleLength(vehicle) - GAP;
 			}
 		}
@@ -145,7 +218,16 @@ class SC_Spawn
 		// loose items in rows across the floor, from the back wall towards the vehicle
 		array<string> types = new array<string>();
 		array<SC_Item> specs = new array<SC_Item>();
-		foreach (SC_Item spec : drop.items)
+		// the gun kit goes on the floor too if there was no vehicle to stow it in
+		array<SC_Item> loose = new array<SC_Item>();
+		foreach (SC_Item dropItem : drop.items)
+			loose.Insert(dropItem);
+		if (gun)
+		{
+			foreach (SC_Item gunItem : gun.cargo)
+				loose.Insert(gunItem);
+		}
+		foreach (SC_Item spec : loose)
 		{
 			for (int n = 0; n < SC_Settings.Count(spec); n++)
 			{
@@ -182,45 +264,48 @@ class SC_Spawn
 		return mm[1][2] - mm[0][2];
 	}
 
-	// Parked inside with its front bumper GAP short of the doors, facing out.
-	EntityAI Vehicle(SC_Item spec)
+	// Parked with its front bumper GAP short of the doors (or the deck's edge), facing out.
+	EntityAI Vehicle(SC_Item spec, string type)
 	{
-		string type = SC_Settings.Choose(spec.type);
 		vector outward = vector.Zero;
 		outward[m_Axis] = m_DoorSign;
-		vector dir = m_Box.VectorToParent(outward);
+		vector dir = Dir(outward);
 		float yaw = dir.VectorToAngles()[0];
 
-		EntityAI vehicle = EntityAI.Cast(g_Game.CreateObjectEx(type, m_Box.ModelToWorld(Inside(0, 0, 1)), ECE_CREATEPHYSICS | ECE_UPDATEPATHGRAPH));
+		EntityAI vehicle = m_Ride;
 		if (!vehicle)
 		{
-			Print("[ShippingCrate] could not create vehicle " + type);
-			return null;
+			vehicle = EntityAI.Cast(g_Game.CreateObjectEx(type, ToWorld(Inside(0, 0, 1)), ECE_CREATEPHYSICS | ECE_UPDATEPATHGRAPH));
+			if (!vehicle)
+			{
+				Print("[ShippingCrate] could not create vehicle " + type);
+				return null;
+			}
+			vehicle.SetOrientation(Vector(yaw, 0, 0));
+			// fit it out first: it sits differently with wheels on
+			Fill(vehicle, spec, true);
 		}
-		vehicle.SetOrientation(Vector(yaw, 0, 0));
-
-		// fit it out first: it sits differently with wheels on
-		Fill(vehicle, spec, true);
 
 		vector mm[2];
 		Bounds(vehicle, mm);
 		float half = (mm[1][2] - mm[0][2]) * 0.5;
 		float along = HalfLength() - GAP - half;
-		vector p = m_Box.ModelToWorld(Inside(along, 0, 0));
+		vector p = ToWorld(Inside(along, 0, 0));
 		// model z runs front to back; centre it on its footprint, wheels just above the floor
 		vector offset = vehicle.VectorToParent(Vector((mm[0][0] + mm[1][0]) * 0.5, 0, (mm[0][2] + mm[1][2]) * 0.5));
 		p = p - offset;
-		p[1] = m_Box.ModelToWorld(Inside(along, 0, 0))[1] - mm[0][1] + 0.1;
+		p[1] = ToWorld(Inside(along, 0, 0))[1] - mm[0][1] + 0.1;
 		vehicle.SetPosition(p);
 		vehicle.SetOrientation(Vector(yaw, 0, 0));
 		vehicle.SetLifetime(VEHICLE_LIFETIME);
+		dBodyEnableGravity(vehicle, true);   // a vehicle that rode down had it off
 		dBodyActive(vehicle, ActiveState.ACTIVE);
 		return vehicle;
 	}
 
 	EntityAI FloorItem(string type, vector modelPos)
 	{
-		vector p = m_Box.ModelToWorld(modelPos);
+		vector p = ToWorld(modelPos);
 		EntityAI item = EntityAI.Cast(g_Game.CreateObjectEx(type, p, ECE_SETUP | ECE_UPDATEPATHGRAPH | ECE_CREATEPHYSICS));
 		if (!item)
 		{
@@ -231,7 +316,7 @@ class SC_Spawn
 		Bounds(item, mm);
 		p[1] = p[1] - mm[0][1];
 		item.SetPosition(p);
-		item.SetOrientation(Vector(m_Box.GetOrientation()[0] + Math.RandomFloat(-20, 20), 0, 0));
+		item.SetOrientation(Vector(m_Yaw + Math.RandomFloat(-20, 20), 0, 0));
 		return item;
 	}
 

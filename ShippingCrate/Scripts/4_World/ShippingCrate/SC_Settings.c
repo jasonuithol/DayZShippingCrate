@@ -15,14 +15,25 @@ class SC_Item
 	ref array<ref SC_Item> cargo = new array<ref SC_Item>();
 }
 
-// One possible load for the container: a vehicle parked inside, nose to the doors, and loose
-// items on the floor behind it.
+// One possible load: a vehicle and loose items, in the shipping container (vehicle nose to the
+// doors, items behind it) or, for a vehicle too big for it, on a pallet (vehicle at one end,
+// items on the free end).
 class SC_Drop
 {
 	string name;
 	float weight = 1;            // how often this load comes up relative to the others
 	ref SC_Item vehicle;         // optional
+	string carrier;              // "container", "pallet", or left out: whichever the vehicle fits
 	ref array<ref SC_Item> items = new array<ref SC_Item>();
+}
+
+// A gun kit: what goes in the vehicle's boot (or on the floor if the load has no vehicle). Picked
+// separately from the vehicle: the delivery radio has a knob for each.
+class SC_Gun
+{
+	string name;
+	float weight = 1;
+	ref array<ref SC_Item> cargo = new array<ref SC_Item>();
 }
 
 class SC_Config
@@ -35,8 +46,10 @@ class SC_Config
 	bool openDoors = false;      // the doors are always unlocked; this opens them too
 	int selfDestructMinutes = 10; // after landing: then the bear warns, then it all blows up and is removed; -1 = never
 	int warningSeconds = 60;     // how long the bear warns before it blows
+	float fallSpeedScale = 1;    // the parachute's fall speed, times Expansion's
 	ref array<string> colours = {"Blue", "Yellow", "Orange", "Red"};
-	ref array<ref SC_Drop> drops = new array<ref SC_Drop>();
+	ref array<ref SC_Drop> drops = new array<ref SC_Drop>();   // the vehicle loads
+	ref array<ref SC_Gun> guns = new array<ref SC_Gun>();
 }
 
 class SC_Settings
@@ -118,10 +131,23 @@ class SC_Settings
 			c.selfDestructMinutes = 10;
 		if (c.warningSeconds <= 0)
 			c.warningSeconds = 60;
+		if (c.fallSpeedScale <= 0)
+			c.fallSpeedScale = 1;
 		if (!c.colours || c.colours.Count() == 0)
 			c.colours = {"Blue", "Yellow", "Orange", "Red"};
 		if (!c.drops)
 			c.drops = new array<ref SC_Drop>();
+		if (!c.guns)
+			c.guns = new array<ref SC_Gun>();
+		foreach (SC_Gun g : c.guns)
+		{
+			if (g.weight <= 0)
+				g.weight = 1;
+			if (!g.cargo)
+				g.cargo = new array<ref SC_Item>();
+			foreach (SC_Item gi : g.cargo)
+				SanitiseItem(gi);
+		}
 		foreach (SC_Drop d : c.drops)
 		{
 			if (d.weight <= 0)
@@ -165,6 +191,25 @@ class SC_Settings
 				return drop;
 		}
 		return drops[drops.Count() - 1];
+	}
+
+	// weighted random gun kit; null if there are none
+	static SC_Gun PickGun()
+	{
+		array<ref SC_Gun> guns = Get().guns;
+		float total = 0;
+		foreach (SC_Gun g : guns)
+			total += g.weight;
+		if (total <= 0)
+			return null;
+		float r = Math.RandomFloat(0, total);
+		foreach (SC_Gun gun : guns)
+		{
+			r -= gun.weight;
+			if (r <= 0)
+				return gun;
+		}
+		return guns[guns.Count() - 1];
 	}
 
 	// 1-based index into COLOURS, picked from the configured colours

@@ -1,7 +1,7 @@
 // The drop's lights. Client side only (lights are script entities, no objects or collision):
 // navigation lights under the plane's wingtips and at its tail, a spotlight under the falling
 // container shining on where it will land, at each end of the container a runway edge light
-// whose lamp is a rotating orange beacon, falling and landed, and the teddy bear's red eyes.
+// whose lamp is a rotating orange beacon, falling and landed, (the teddy bear's eyes are a glowing prop, not a light).
 
 // wingtip navigation light: red on the left, green on the right
 class SC_NavLight: PointLightBase
@@ -46,22 +46,6 @@ class SC_BeaconBeam: SpotLightBase
 		SetFlareVisible(true);
 		SetAmbientColor(1.0, 0.45, 0.05);
 		SetDiffuseColor(1.0, 0.45, 0.05);
-	}
-}
-
-// the teddy bear's eyes in its last minute
-class SC_EyeLight: PointLightBase
-{
-	void SC_EyeLight()
-	{
-		SetVisibleDuringDaylight(true);
-		SetRadiusTo(3);
-		SetBrightnessTo(20);
-		SetCastShadow(false);
-		EnableSpecular(false);
-		SetFlareVisible(true);
-		SetAmbientColor(1.0, 0.0, 0.0);
-		SetDiffuseColor(1.0, 0.0, 0.0);
 	}
 }
 

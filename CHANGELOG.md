@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased (0.3, work in progress)
+
+- Vehicles too big for the container come down on a deck of wooden pallets instead, with
+  room at one end for a hand cart, a sea chest and a barrel. The real vehicle rides down on it.
+  Each load's `carrier` can be `"container"`, `"pallet"` or left empty to choose by size. New
+  default load: an M3S truck.
+- Gun kits (`guns`): SCR 17, M4A1, AKM and SVD, four guns each with spare magazines, in the
+  vehicle's boot.
+- The delivery radio: a bright orange walkie-talkie with two knobs instead of a frequency,
+  one for the vehicle and one for the guns (click for the next vehicle, hold to step through
+  the guns; the prompts show what each knob is on). A drop on a group with a tuned radio brings
+  what it's tuned to; otherwise it's random. Every new character starts with one.
+- The IEDs are stacked upright with the bear sitting on top, so a slope can't bury them.
+- The bear's eyes are round, gentler, and flash only while it speaks.
+- The parachutes lean away from each other.
+- The mission ends with its own message ("The delivery near X has self-destructed"), not
+  Expansion's "destroyed by infected".
+- `fallSpeedScale`: how fast the drop falls, times Expansion's speed (default 1).
+
 ## 0.2 - 2026-11-12
 
 - The drop, lit: red, green and white navigation lights under the plane's wingtips and tail;

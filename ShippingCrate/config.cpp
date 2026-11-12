@@ -2,10 +2,10 @@ class CfgPatches
 {
 	class ShippingCrate
 	{
-		units[] = {"ShippingCrate_Airdrop", "SC_RunwayLight", "SC_Prop_IED", "SC_Prop_Bear", "SC_Prop_GlowRed", "SC_Prop_GlowGreen", "SC_Prop_GlowWhite"};
+		units[] = {"ShippingCrate_Airdrop", "SC_DropRadio", "SC_RunwayLight", "SC_Prop_IED", "SC_Prop_Bear", "SC_Prop_GlowRed", "SC_Prop_GlowGreen", "SC_Prop_GlowWhite", "SC_Prop_EyeRed"};
 		weapons[] = {};
 		requiredVersion = 0.1;
-		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Structures_Industrial", "DZ_Structures_Specific", "DZ_Sounds_Effects", "DZ_Gear_Containers", "DZ_Gear_Consumables", "DZ_Weapons_Explosives", "DayZExpansion_Missions_Scripts", "DayZExpansion_Objects_Missions"};
+		requiredAddons[] = {"DZ_Data", "DZ_Scripts", "DZ_Structures_Industrial", "DZ_Structures_Specific", "DZ_Sounds_Effects", "DZ_Gear_Containers", "DZ_Gear_Consumables", "DZ_Weapons_Explosives", "DZ_Radio", "DZ_Gear_Food", "DayZExpansion_Missions_Scripts", "DayZExpansion_Objects_Missions"};
 	};
 };
 
@@ -16,7 +16,7 @@ class CfgMods
 		dir = "ShippingCrate";
 		name = "Shipping Crate";
 		type = "mod";
-		dependencies[] = {"World"};
+		dependencies[] = {"World", "Mission"};
 
 		class defs
 		{
@@ -25,6 +25,11 @@ class CfgMods
 				value = "";
 				files[] = {"ShippingCrate/Scripts/4_World"};
 			};
+			class missionScriptModule
+			{
+				value = "";
+				files[] = {"ShippingCrate/Scripts/5_Mission"};
+			};
 		};
 	};
 };
@@ -32,6 +37,33 @@ class CfgMods
 class CfgVehicles
 {
 	class HouseNoDestruct;
+	class Inventory_Base;
+
+	// The delivery radio: vanilla's walkie-talkie, bright orange, and not a radio. In hand it
+	// tunes to one of the loads in ShippingCrate.json; a drop on a group that has one brings
+	// what it's tuned to. Every new character starts with one.
+	class SC_DropRadio: Inventory_Base
+	{
+		scope = 2;
+		displayName = "Delivery radio";
+		descriptionShort = "Bright orange and no good for talking. Tune it to the delivery you want: the next airdrop on your group brings it.";
+		model = "\dz\gear\radio\WalkieTalkie.p3d";
+		weight = 250;
+		itemSize[] = {1, 3};
+		inventorySlot[] = {"WalkieTalkie", "Chemlight"};
+		rotationFlags = 1;
+		class DamageSystem
+		{
+			class GlobalHealth
+			{
+				class Health
+				{
+					hitpoints = 100;
+					healthLevels[] = {{1.0, {"ShippingCrate\data\sc_radio_orange.rvmat"}}, {0.7, {"ShippingCrate\data\sc_radio_orange.rvmat"}}, {0.5, {"ShippingCrate\data\sc_radio_orange.rvmat"}}, {0.3, {"ShippingCrate\data\sc_radio_orange.rvmat"}}, {0.0, {"ShippingCrate\data\sc_radio_orange.rvmat"}}};
+				};
+			};
+		};
+	};
 	class ExpansionAirdropContainerBase_Server;
 	class ExpansionAirdropContainerBase_Client;
 
@@ -82,6 +114,16 @@ class CfgVehicles
 		hiddenSelections[] = {"camo"};
 		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(1,0,0,1,CO)"};
 		hiddenSelectionsMaterials[] = {"ShippingCrate\data\sc_nav_red.rvmat"};
+	};
+	// the teddy bear's eyes: round (a plum, every cooking state's surface in the same gentle
+	// red glow), much gentler than the navigation markers
+	class SC_Prop_EyeRed: HouseNoDestruct
+	{
+		scope = 1;
+		model = "\dz\gear\food\plum.p3d";
+		hiddenSelections[] = {"cs_raw", "cs_baked", "cs_boiled", "cs_dried", "cs_burned"};
+		hiddenSelectionsTextures[] = {"#(argb,8,8,3)color(1,0,0,1,CO)", "#(argb,8,8,3)color(1,0,0,1,CO)", "#(argb,8,8,3)color(1,0,0,1,CO)", "#(argb,8,8,3)color(1,0,0,1,CO)", "#(argb,8,8,3)color(1,0,0,1,CO)"};
+		hiddenSelectionsMaterials[] = {"ShippingCrate\data\sc_eye_red.rvmat", "ShippingCrate\data\sc_eye_red.rvmat", "ShippingCrate\data\sc_eye_red.rvmat", "ShippingCrate\data\sc_eye_red.rvmat", "ShippingCrate\data\sc_eye_red.rvmat"};
 	};
 	class SC_Prop_GlowGreen: SC_Prop_GlowRed
 	{

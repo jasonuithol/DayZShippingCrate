@@ -7,44 +7,220 @@
     "openDoors": false,
     "selfDestructMinutes": 10,
     "warningSeconds": 60,
-    "colours": ["Blue", "Yellow", "Orange", "Red"],
+    "fallSpeedScale": 1,
+    "colours": [
+        "Blue",
+        "Yellow",
+        "Orange",
+        "Red"
+    ],
     "drops": [
         {
-            "name": "Ada and SCRs",
+            "name": "Ada",
             "weight": 1,
             "vehicle": {
                 "type": "OffroadHatchback",
                 "fluids": true,
                 "attachments": [
-                    {"type": "HatchbackWheel", "count": 5},
-                    {"type": "HatchbackDoors_Driver"},
-                    {"type": "HatchbackDoors_CoDriver"},
-                    {"type": "HatchbackHood"},
-                    {"type": "HatchbackTrunk"},
-                    {"type": "CarBattery"},
-                    {"type": "CarRadiator"},
-                    {"type": "SparkPlug"},
-                    {"type": "HeadlightH7", "count": 2}
+                    {
+                        "type": "HatchbackWheel",
+                        "count": 5
+                    },
+                    {
+                        "type": "HatchbackDoors_Driver"
+                    },
+                    {
+                        "type": "HatchbackDoors_CoDriver"
+                    },
+                    {
+                        "type": "HatchbackHood"
+                    },
+                    {
+                        "type": "HatchbackTrunk"
+                    },
+                    {
+                        "type": "CarBattery"
+                    },
+                    {
+                        "type": "CarRadiator"
+                    },
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
+                    }
                 ],
                 "cargo": [
                     {
-                        "type": "SCARH",
-                        "count": 4,
-                        "magazine": "Mag_SCARH_20Rnd",
-                        "attachments": [
-                            {"type": "SCAR_StockBttstck"},
-                            {"type": "ACOGOptic"},
-                            {"type": "UniversalLight", "attachments": [{"type": "Battery9V"}]}
-                        ]
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
                     },
-                    {"type": "Mag_SCARH_20Rnd", "count": 8},
-                    {"type": "GlassBottle", "liquid": "Gasoline", "quantity": 1},
-                    {"type": "PetrolLighter"},
-                    {"type": "Rope"}
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
                 ]
             },
             "items": [
-                {"type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"}
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "M3S truck",
+            "weight": 1,
+            "vehicle": {
+                "type": "Truck_01_Covered",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "Truck_01_Wheel",
+                        "count": 4
+                    },
+                    {
+                        "type": "Truck_01_WheelDouble",
+                        "count": 4
+                    },
+                    {
+                        "type": "Truck_01_Door_1_1"
+                    },
+                    {
+                        "type": "Truck_01_Door_2_1"
+                    },
+                    {
+                        "type": "Truck_01_Hood"
+                    },
+                    {
+                        "type": "TruckBattery"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
+                    }
+                ],
+                "cargo": []
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                },
+                {
+                    "type": "SeaChest"
+                },
+                {
+                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
+                }
+            ]
+        }
+    ],
+    "guns": [
+        {
+            "name": "SCR 17",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "SCARH",
+                    "count": 4,
+                    "magazine": "Mag_SCARH_20Rnd",
+                    "attachments": [
+                        {
+                            "type": "SCAR_StockBttstck"
+                        },
+                        {
+                            "type": "ACOGOptic"
+                        },
+                        {
+                            "type": "UniversalLight",
+                            "attachments": [
+                                {
+                                    "type": "Battery9V"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "Mag_SCARH_20Rnd",
+                    "count": 8
+                }
+            ]
+        },
+        {
+            "name": "M4A1",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "M4A1",
+                    "count": 4,
+                    "magazine": "Mag_STANAG_30Rnd",
+                    "attachments": [
+                        {
+                            "type": "M4_OEBttstck"
+                        },
+                        {
+                            "type": "M4_PlasticHndgrd"
+                        },
+                        {
+                            "type": "ACOGOptic"
+                        }
+                    ]
+                },
+                {
+                    "type": "Mag_STANAG_30Rnd",
+                    "count": 8
+                }
+            ]
+        },
+        {
+            "name": "AKM",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "AKM",
+                    "count": 4,
+                    "magazine": "Mag_AKM_30Rnd",
+                    "attachments": [
+                        {
+                            "type": "AK_WoodBttstck"
+                        },
+                        {
+                            "type": "AK_WoodHndgrd"
+                        },
+                        {
+                            "type": "PSO1Optic"
+                        }
+                    ]
+                },
+                {
+                    "type": "Mag_AKM_30Rnd",
+                    "count": 8
+                }
+            ]
+        },
+        {
+            "name": "SVD",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "SVD",
+                    "count": 4,
+                    "magazine": "Mag_SVD_10Rnd",
+                    "attachments": [
+                        {
+                            "type": "PSO1Optic"
+                        }
+                    ]
+                },
+                {
+                    "type": "Mag_SVD_10Rnd",
+                    "count": 8
+                }
             ]
         }
     ]
