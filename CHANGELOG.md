@@ -1,23 +1,35 @@
 # Changelog
 
-## Unreleased (0.3, work in progress)
+## 0.3 - 2026-11-13
 
-- Vehicles too big for the container come down on a deck of wooden pallets instead, with
-  room at one end for a hand cart, a sea chest and a barrel. The real vehicle rides down on it.
-  Each load's `carrier` can be `"container"`, `"pallet"` or left empty to choose by size. New
-  default load: an M3S truck.
-- Gun kits (`guns`): SCR 17, M4A1, AKM and SVD, four guns each with spare magazines, in the
-  vehicle's boot.
-- The delivery radio: a bright orange walkie-talkie with two knobs instead of a frequency,
-  one for the vehicle and one for the guns (click for the next vehicle, hold to step through
-  the guns; the prompts show what each knob is on). A drop on a group with a tuned radio brings
-  what it's tuned to; otherwise it's random. Every new character starts with one.
-- The IEDs are stacked upright with the bear sitting on top, so a slope can't bury them.
-- The bear's eyes are round, gentler, and flash only while it speaks.
+- Every vanilla car, truck and motorbike: Ada 4x4, Olga 24, Gunter 2, Sarka 120, M1025,
+  M3S Covered, Jana 50 and Bitrak 682, each with all its parts and full fluids, in a random
+  colour.
+- Vehicles too big for the container (the M3S and the M1025) come down on a deck of wooden
+  pallets instead, the real vehicle riding on it, with room at the free end for the hand cart,
+  a sea chest and a barrel. A load's `carrier` can be `"container"`, `"pallet"` or left out to
+  choose by size.
+- The M3S's sea chest is full of explosives: C4, IEDs, claymores, landmines, frag, flash, gas
+  and smoke grenades, and two remote detonator kits.
+- Gun kits (`guns`): VSD, LAR, KA-M, SCR 16, SVAL, R12 and M79. Each kit is four guns, loaded,
+  with spare magazines (or ammo), in the vehicle's boot. On a motorbike they lie beside it.
+- The delivery radio: a bright orange walkie-talkie with two knobs instead of a frequency, one
+  for the vehicle and one for the guns (click for the next vehicle, hold to step through the
+  guns; the prompts show what each is on). A drop on a group with a tuned radio brings what
+  it's tuned to, read again as the crate leaves the plane. An untuned vehicle knob means a
+  random vehicle; an untuned guns knob ("any") fills the boot with one of each gun, round after
+  round until it's full. Every new character starts with one.
+- A server restart no longer leaves a drop's contents behind: landed drops that haven't blown
+  up yet, and vehicles still riding down, are recorded (`profiles/ShippingCrate/landed.json`)
+  and cleared away 20 s after the next start.
+- The IEDs are stacked upright with the bear sitting on top, so a slope can't bury them. The
+  bear's eyes are round and flash only while it speaks, and it wiggles as it does.
 - The parachutes lean away from each other.
 - The mission ends with its own message ("The delivery near X has self-destructed"), not
   Expansion's "destroyed by infected".
 - `fallSpeedScale`: how fast the drop falls, times Expansion's speed (default 1).
+- Upgrading: the server only writes `ShippingCrate.json` when there isn't one, so delete (or
+  rename) the old file to get the new loads, guns and settings.
 
 ## 0.2 - 2026-11-12
 

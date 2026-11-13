@@ -16,15 +16,29 @@
     ],
     "drops": [
         {
-            "name": "Ada",
+            "name": "Ada 4x4",
             "weight": 1,
+            "carrier": "",
             "vehicle": {
-                "type": "OffroadHatchback",
+                "type": "OffroadHatchback|OffroadHatchback_Blue|OffroadHatchback_White",
                 "fluids": true,
                 "attachments": [
                     {
                         "type": "HatchbackWheel",
                         "count": 5
+                    },
+                    {
+                        "type": "CarRadiator"
+                    },
+                    {
+                        "type": "CarBattery"
+                    },
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
                     },
                     {
                         "type": "HatchbackDoors_Driver"
@@ -37,19 +51,6 @@
                     },
                     {
                         "type": "HatchbackTrunk"
-                    },
-                    {
-                        "type": "CarBattery"
-                    },
-                    {
-                        "type": "CarRadiator"
-                    },
-                    {
-                        "type": "SparkPlug"
-                    },
-                    {
-                        "type": "HeadlightH7",
-                        "count": 2
                     }
                 ],
                 "cargo": [
@@ -73,10 +74,264 @@
             ]
         },
         {
-            "name": "M3S truck",
+            "name": "Olga 24",
             "weight": 1,
+            "carrier": "",
             "vehicle": {
-                "type": "Truck_01_Covered",
+                "type": "CivilianSedan|CivilianSedan_Black|CivilianSedan_Wine",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "CivSedanWheel",
+                        "count": 5
+                    },
+                    {
+                        "type": "CarRadiator"
+                    },
+                    {
+                        "type": "CarBattery"
+                    },
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
+                    },
+                    {
+                        "type": "CivSedanDoors_Driver"
+                    },
+                    {
+                        "type": "CivSedanDoors_CoDriver"
+                    },
+                    {
+                        "type": "CivSedanDoors_BackLeft"
+                    },
+                    {
+                        "type": "CivSedanDoors_BackRight"
+                    },
+                    {
+                        "type": "CivSedanHood"
+                    },
+                    {
+                        "type": "CivSedanTrunk"
+                    }
+                ],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Gunter 2",
+            "weight": 1,
+            "carrier": "",
+            "vehicle": {
+                "type": "Hatchback_02|Hatchback_02_Black|Hatchback_02_Blue",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "Hatchback_02_Wheel",
+                        "count": 5
+                    },
+                    {
+                        "type": "CarRadiator"
+                    },
+                    {
+                        "type": "CarBattery"
+                    },
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
+                    },
+                    {
+                        "type": "Hatchback_02_Door_1_1"
+                    },
+                    {
+                        "type": "Hatchback_02_Door_1_2"
+                    },
+                    {
+                        "type": "Hatchback_02_Door_2_1"
+                    },
+                    {
+                        "type": "Hatchback_02_Door_2_2"
+                    },
+                    {
+                        "type": "Hatchback_02_Hood"
+                    },
+                    {
+                        "type": "Hatchback_02_Trunk"
+                    }
+                ],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Sarka 120",
+            "weight": 1,
+            "carrier": "",
+            "vehicle": {
+                "type": "Sedan_02|Sedan_02_Grey|Sedan_02_Red",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "Sedan_02_Wheel",
+                        "count": 5
+                    },
+                    {
+                        "type": "CarRadiator"
+                    },
+                    {
+                        "type": "CarBattery"
+                    },
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
+                    },
+                    {
+                        "type": "Sedan_02_Door_1_1"
+                    },
+                    {
+                        "type": "Sedan_02_Door_1_2"
+                    },
+                    {
+                        "type": "Sedan_02_Door_2_1"
+                    },
+                    {
+                        "type": "Sedan_02_Door_2_2"
+                    },
+                    {
+                        "type": "Sedan_02_Hood"
+                    },
+                    {
+                        "type": "Sedan_02_Trunk"
+                    }
+                ],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "M1025",
+            "weight": 1,
+            "carrier": "",
+            "vehicle": {
+                "type": "Offroad_02|Offroad_02_Beige",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "Offroad_02_Wheel",
+                        "count": 5
+                    },
+                    {
+                        "type": "Offroad_02_Trunk"
+                    },
+                    {
+                        "type": "Offroad_02_Hood"
+                    },
+                    {
+                        "type": "Offroad_02_Door_1_1"
+                    },
+                    {
+                        "type": "Offroad_02_Door_1_2"
+                    },
+                    {
+                        "type": "Offroad_02_Door_2_1"
+                    },
+                    {
+                        "type": "Offroad_02_Door_2_2"
+                    },
+                    {
+                        "type": "HeadlightH7",
+                        "count": 2
+                    },
+                    {
+                        "type": "GlowPlug"
+                    },
+                    {
+                        "type": "CarBattery"
+                    }
+                ],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "M3S Covered",
+            "weight": 1,
+            "carrier": "",
+            "vehicle": {
+                "type": "Truck_01_Covered|Truck_01_Covered_Blue|Truck_01_Covered_Orange",
                 "fluids": true,
                 "attachments": [
                     {
@@ -88,20 +343,20 @@
                         "count": 4
                     },
                     {
-                        "type": "Truck_01_Door_1_1"
-                    },
-                    {
-                        "type": "Truck_01_Door_2_1"
-                    },
-                    {
-                        "type": "Truck_01_Hood"
-                    },
-                    {
                         "type": "TruckBattery"
                     },
                     {
                         "type": "HeadlightH7",
                         "count": 2
+                    },
+                    {
+                        "type": "Truck_01_Hood"
+                    },
+                    {
+                        "type": "Truck_01_Door_1_1"
+                    },
+                    {
+                        "type": "Truck_01_Door_2_1"
                     }
                 ],
                 "cargo": []
@@ -111,74 +366,164 @@
                     "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
                 },
                 {
-                    "type": "SeaChest"
+                    "type": "SeaChest",
+                    "cargo": [
+                        {
+                            "type": "RemoteDetonator",
+                            "count": 2
+                        },
+                        {
+                            "type": "Plastic_Explosive",
+                            "count": 3
+                        },
+                        {
+                            "type": "ImprovisedExplosive",
+                            "count": 2
+                        },
+                        {
+                            "type": "ClaymoreMine",
+                            "count": 2
+                        },
+                        {
+                            "type": "LandMineTrap",
+                            "count": 2
+                        },
+                        {
+                            "type": "M67Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "RGD5Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "FlashGrenade",
+                            "count": 2
+                        },
+                        {
+                            "type": "Grenade_ChemGas"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Green"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Purple"
+                        }
+                    ]
                 },
                 {
                     "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Motorbike",
+            "weight": 1,
+            "carrier": "",
+            "vehicle": {
+                "type": "Motorbike_01_Blue|Motorbike_01_Red|Motorbike_01_Yellow",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "Motorbike_01_Wheel_1"
+                    },
+                    {
+                        "type": "Motorbike_01_Wheel_2"
+                    }
+                ],
+                "cargo": []
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Sport bike",
+            "weight": 1,
+            "carrier": "",
+            "vehicle": {
+                "type": "Motorbike_02_Red",
+                "fluids": true,
+                "attachments": [
+                    {
+                        "type": "SparkPlug"
+                    },
+                    {
+                        "type": "Motorbike_02_Wheel_1"
+                    },
+                    {
+                        "type": "Motorbike_02_Wheel_2"
+                    },
+                    {
+                        "type": "Motorbike_02_ShieldFront_Red"
+                    },
+                    {
+                        "type": "Motorbike_02_ShieldLeft_Red"
+                    },
+                    {
+                        "type": "Motorbike_02_ShieldRight_Red"
+                    }
+                ],
+                "cargo": []
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
                 }
             ]
         }
     ],
     "guns": [
         {
-            "name": "SCR 17",
+            "name": "VSD",
             "weight": 1,
             "cargo": [
                 {
-                    "type": "SCARH",
+                    "type": "SVD",
                     "count": 4,
-                    "magazine": "Mag_SCARH_20Rnd",
+                    "magazine": "Mag_SVD_10Rnd",
                     "attachments": [
                         {
-                            "type": "SCAR_StockBttstck"
-                        },
-                        {
-                            "type": "ACOGOptic"
-                        },
-                        {
-                            "type": "UniversalLight",
-                            "attachments": [
-                                {
-                                    "type": "Battery9V"
-                                }
-                            ]
+                            "type": "PSO1Optic"
                         }
                     ]
                 },
                 {
-                    "type": "Mag_SCARH_20Rnd",
+                    "type": "Mag_SVD_10Rnd",
                     "count": 8
                 }
             ]
         },
         {
-            "name": "M4A1",
+            "name": "LAR",
             "weight": 1,
             "cargo": [
                 {
-                    "type": "M4A1",
+                    "type": "FAL",
                     "count": 4,
-                    "magazine": "Mag_STANAG_30Rnd",
+                    "magazine": "Mag_FAL_20Rnd",
                     "attachments": [
                         {
-                            "type": "M4_OEBttstck"
+                            "type": "Fal_FoldingBttstck"
                         },
                         {
-                            "type": "M4_PlasticHndgrd"
-                        },
-                        {
-                            "type": "ACOGOptic"
+                            "type": "M68Optic"
                         }
                     ]
                 },
                 {
-                    "type": "Mag_STANAG_30Rnd",
+                    "type": "Mag_FAL_20Rnd",
                     "count": 8
                 }
             ]
         },
         {
-            "name": "AKM",
+            "name": "KA-M",
             "weight": 1,
             "cargo": [
                 {
@@ -204,22 +549,102 @@
             ]
         },
         {
-            "name": "SVD",
+            "name": "SCR 16",
             "weight": 1,
             "cargo": [
                 {
-                    "type": "SVD",
+                    "type": "SCARL|SCARL_Black",
                     "count": 4,
-                    "magazine": "Mag_SVD_10Rnd",
+                    "magazine": "Mag_STANAG_30Rnd",
                     "attachments": [
                         {
-                            "type": "PSO1Optic"
+                            "type": "SCAR_StockBttstck"
+                        },
+                        {
+                            "type": "ACOGOptic"
+                        },
+                        {
+                            "type": "UniversalLight",
+                            "attachments": [
+                                {
+                                    "type": "Battery9V"
+                                }
+                            ]
                         }
                     ]
                 },
                 {
-                    "type": "Mag_SVD_10Rnd",
+                    "type": "Mag_STANAG_30Rnd",
                     "count": 8
+                }
+            ]
+        },
+        {
+            "name": "SVAL",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "ASVAL",
+                    "count": 4,
+                    "magazine": "Mag_VAL_20Rnd",
+                    "attachments": [
+                        {
+                            "type": "M68Optic"
+                        },
+                        {
+                            "type": "UniversalLight",
+                            "attachments": [
+                                {
+                                    "type": "Battery9V"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "Mag_VAL_20Rnd",
+                    "count": 8
+                }
+            ]
+        },
+        {
+            "name": "R12",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "R12",
+                    "count": 4,
+                    "attachments": [
+                        {
+                            "type": "UniversalLight",
+                            "attachments": [
+                                {
+                                    "type": "Battery9V"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "ReflexOptic"
+                        }
+                    ]
+                },
+                {
+                    "type": "AmmoBox_00buck_10rnd",
+                    "count": 6
+                }
+            ]
+        },
+        {
+            "name": "M79",
+            "weight": 1,
+            "cargo": [
+                {
+                    "type": "M79",
+                    "count": 4
+                },
+                {
+                    "type": "Ammo_40mm_Explosive",
+                    "count": 12
                 }
             ]
         }

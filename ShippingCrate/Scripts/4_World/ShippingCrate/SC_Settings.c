@@ -11,6 +11,8 @@ class SC_Item
 	string liquid;               // bottles, canisters, pots: Water, Gasoline, Diesel, Vodka, Beer...
 	string magazine;             // firearms: a magazine loaded into it, with a round chambered
 	bool fluids;                 // vehicles: fill fuel, oil, coolant and brake fluid
+	[NonSerialized()]
+	bool ifRoom;                 // made in script: no complaint when it doesn't fit (a boot filled up)
 	ref array<ref SC_Item> attachments = new array<ref SC_Item>();
 	ref array<ref SC_Item> cargo = new array<ref SC_Item>();
 }
@@ -34,6 +36,8 @@ class SC_Gun
 	string name;
 	float weight = 1;
 	ref array<ref SC_Item> cargo = new array<ref SC_Item>();
+	[NonSerialized()]
+	int floorCount;              // made in script: only the first this many go on a floor (0: all)
 }
 
 class SC_Config
@@ -210,6 +214,54 @@ class SC_Settings
 				return gun;
 		}
 		return guns[guns.Count() - 1];
+	}
+
+	// The guns knob on "any": one of every kit's gun (loaded) with a quarter of its spare
+	// ammunition, in random order, the round repeated MIXED_ROUNDS times so it fills the boot
+	// (what doesn't fit is left out). Without a boot only the first round goes on the floor.
+	static const int MIXED_ROUNDS = 4;
+
+	static SC_Gun MixedGuns()
+	{
+		array<ref SC_Gun> kits = Get().guns;
+		if (kits.Count() == 0)
+			return null;
+		SC_Gun mixed = new SC_Gun();
+		mixed.name = "a mix of guns";
+		for (int round = 0; round < MIXED_ROUNDS; round++)
+		{
+			array<int> order = new array<int>();
+			for (int k = 0; k < kits.Count(); k++)
+				order.Insert(k);
+			order.ShuffleArray();
+			foreach (int i : order)
+			{
+				SC_Gun kit = kits[i];
+				if (kit.cargo.Count() == 0)
+					continue;
+				mixed.cargo.Insert(OneOf(kit.cargo[0], 1));
+				for (int c = 1; c < kit.cargo.Count(); c++)
+					mixed.cargo.Insert(OneOf(kit.cargo[c], Math.Max(1, Math.Round(Count(kit.cargo[c]) / 4.0))));
+			}
+			if (round == 0)
+				mixed.floorCount = mixed.cargo.Count();
+		}
+		return mixed;
+	}
+
+	// spec with a different count (attachments and all), quiet when there's no room
+	protected static SC_Item OneOf(SC_Item spec, int count)
+	{
+		SC_Item copy = new SC_Item();
+		copy.type = spec.type;
+		copy.count = count;
+		copy.quantity = spec.quantity;
+		copy.liquid = spec.liquid;
+		copy.magazine = spec.magazine;
+		copy.attachments = spec.attachments;
+		copy.cargo = spec.cargo;
+		copy.ifRoom = true;
+		return copy;
 	}
 
 	// 1-based index into COLOURS, picked from the configured colours

@@ -15,7 +15,7 @@ void main()
 	Hive ce = CreateHive();
 	if (ce)
 		ce.InitOffline();
-	GetGame().GetWorld().SetDate(2026, 9, 20, 22, 30);   // night, to see the lights
+	GetGame().GetWorld().SetDate(2026, 9, 20, 12, 0);    // midday (22:30 to see the lights at night)
 }
 
 class CustomMission: MissionServer
@@ -97,8 +97,92 @@ class CustomMission: MissionServer
 		Print("[SCTest] every test airdrop mission is busy - skipping this one");
 	}
 
+	void CheckLeftovers(Object riding, Object parked, Object onIt, Object onIt2, Object beside)
+	{
+		Print("[SCTest] after a restart mid-fall: riding truck " + riding + " (want NULL), parked truck kept " + (parked != null) + " (want 1)");
+		Print("[SCTest] after a restart: on the pallet " + onIt + " / " + onIt2 + " (want NULL), beside it " + (beside != null) + " (want 1)");
+		if (parked)
+			GetGame().ObjectDelete(parked);
+		if (beside)
+			GetGame().ObjectDelete(beside);
+	}
+
+	// Every vehicle load with its parts, and every gun kit in every boot: what won't attach,
+	// load or fit is printed by SC_Spawn.Fill ("could not attach/load", "no room for").
+	// fluids read back a moment after filling
+	void CheckFuel(EntityAI vehicle, string name)
+	{
+		CarScript car = CarScript.Cast(vehicle);
+		MotorbikeScript bike = MotorbikeScript.Cast(vehicle);
+		if (car)
+			Print("[SCTest] loads: " + name + " fuel " + car.GetFluidFraction(CarFluid.FUEL) + " oil " + car.GetFluidFraction(CarFluid.OIL));
+		else if (bike)
+			Print("[SCTest] loads: " + name + " fuel " + bike.GetFluidFraction(MotorbikeFluid.FUEL));
+		GetGame().ObjectDelete(vehicle);
+	}
+
+	void LoadsTest()
+	{
+		SC_Config cfg = SC_Settings.Get();
+		int v = 0;
+		foreach (SC_Drop drop : cfg.drops)
+		{
+			if (!drop.vehicle)
+				continue;
+			string type = SC_Settings.Choose(drop.vehicle.type);
+			vector at = TEST_NEAR + Vector(-200 - 15 * v, 0, -200);
+			at[1] = GetGame().SurfaceY(at[0], at[2]) + 1;
+			v++;
+			EntityAI vehicle = EntityAI.Cast(GetGame().CreateObjectEx(type, at, ECE_SETUP | ECE_CREATEPHYSICS | ECE_PLACE_ON_SURFACE));
+			if (!vehicle)
+			{
+				Print("[SCTest] loads: could not create " + type);
+				continue;
+			}
+			SC_Spawn.Fill(vehicle, drop.vehicle, true);
+			int wanted = 0;
+			foreach (SC_Item a : drop.vehicle.attachments)
+				wanted += SC_Settings.Count(a);
+			CarScript car = CarScript.Cast(vehicle);
+			string fuel = "not a car";
+			MotorbikeScript bike = MotorbikeScript.Cast(vehicle);
+			if (car)
+				fuel = "fuel " + car.GetFluidFraction(CarFluid.FUEL);
+			else if (bike)
+				fuel = "bike fuel " + bike.GetFluidFraction(MotorbikeFluid.FUEL);
+			Print("[SCTest] loads: " + drop.name + " (" + type + ", " + GetGame().ConfigGetTextOut("CfgVehicles " + type + " displayName") + ") parts " + vehicle.GetInventory().AttachmentCount() + " of " + wanted + ", " + fuel + ", boot " + SC_Spawn.HasBoot(vehicle) + ", ruined " + vehicle.IsRuined() + ", size " + SC_Pallet.Size(type) + ", fits container " + SC_Pallet.FitsContainer(type));
+			if (!SC_Spawn.HasBoot(vehicle))
+			{
+				GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckFuel, 1000, false, vehicle, drop.name);
+				continue;
+			}
+			int kits = 0;
+			foreach (SC_Gun gun : cfg.guns)
+			{
+				SC_Item kit = new SC_Item();
+				kit.cargo = gun.cargo;
+				int before = vehicle.GetInventory().GetCargo().GetItemCount();
+				SC_Spawn.Fill(vehicle, kit, true);
+				int stowed = vehicle.GetInventory().GetCargo().GetItemCount() - before;
+				int expected = 0;
+				foreach (SC_Item c : gun.cargo)
+					expected += SC_Settings.Count(c);
+				if (stowed != expected)
+					Print("[SCTest] loads: " + drop.name + " boot took " + stowed + " of " + expected + " from the " + gun.name + " kit");
+				kits++;
+				// empty it again for the next kit (the boot contents from the load stay)
+				CargoBase cargo = vehicle.GetInventory().GetCargo();
+				for (int i = cargo.GetItemCount() - 1; i >= before; i--)
+					GetGame().ObjectDelete(cargo.GetItem(i));
+			}
+			Print("[SCTest] loads: " + drop.name + " tried " + kits + " gun kits");
+			GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckFuel, 1000, false, vehicle, drop.name);
+		}
+	}
+
 	void Test()
 	{
+		LoadsTest();
 		SC_Config cfg = SC_Settings.Get();
 		Print("[SCTest] " + cfg.drops.Count() + " loads, enabled " + cfg.enabled + ", file exists: " + FileExist(SC_Settings.FILE));
 
@@ -124,6 +208,44 @@ class CustomMission: MissionServer
 			}
 		}
 		Print("[SCTest] unknown class names: " + unknown);
+
+		// a drop left standing by a restart: what's on it goes, what's beside it stays
+		vector lf[4];
+		lf[0] = "1 0 0";
+		lf[1] = "0 1 0";
+		lf[2] = "0 0 1";
+		lf[3] = TEST_NEAR + "30 0 30";
+		lf[3][1] = GetGame().SurfaceY(lf[3][0], lf[3][2]);
+		SC_Leftovers.Remember("test pallet", lf, "-1.5 0 -5", "1.5 3 5");
+		Object onIt = GetGame().CreateObjectEx("Barrel_Green", lf[3] + "0 0.5 2", ECE_PLACE_ON_SURFACE);
+		Object onIt2 = GetGame().CreateObjectEx("SeaChest", lf[3] + "0.5 0.3 -3", ECE_PLACE_ON_SURFACE);
+		Object beside = GetGame().CreateObjectEx("Barrel_Blue", lf[3] + "4 0.5 0", ECE_PLACE_ON_SURFACE);
+		// ... and one whose pallet was still falling: its truck, up in the air, goes; the same
+		// kind of truck parked nearby (not ours) stays
+		vector dropPoint = TEST_NEAR + "60 0 60";
+		dropPoint[1] = GetGame().SurfaceY(dropPoint[0], dropPoint[2]);
+		EntityAI riding = EntityAI.Cast(GetGame().CreateObjectEx("Truck_01_Covered", dropPoint + "5 300 5", ECE_CREATEPHYSICS));
+		EntityAI parked = EntityAI.Cast(GetGame().CreateObjectEx("Truck_01_Covered", dropPoint + "15 1 0", ECE_PLACE_ON_SURFACE | ECE_CREATEPHYSICS));
+		if (riding)
+		{
+			dBodyEnableGravity(riding, false);
+			dBodyActive(riding, ActiveState.INACTIVE);
+			int r1;
+			int r2;
+			int r3;
+			int r4;
+			riding.GetPersistentID(r1, r2, r3, r4);
+			int p1;
+			int p2;
+			int p3;
+			int p4;
+			parked.GetPersistentID(p1, p2, p3, p4);
+			Print("[SCTest] persistent IDs: riding " + r1 + " " + r2 + " " + r3 + " " + r4 + ", parked " + p1 + " " + p2 + " " + p3 + " " + p4);
+			SC_Leftovers.RememberRide("test truck on a pallet", dropPoint, riding);
+		}
+		SC_Leftovers.ClearAll();
+		// deletions happen at the end of the frame: look a second later
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckLeftovers, 1000, false, riding, parked, onIt, onIt2, beside);
 
 		// delivery radios: each knob cycles through its list; a tuned knob picks its half
 		SC_DropRadio blank = SC_DropRadio.Cast(GetGame().CreateObjectEx("SC_DropRadio", TEST_NEAR + "0 1 5", ECE_SETUP));
@@ -173,7 +295,7 @@ class CustomMission: MissionServer
 			return;
 		}
 		m_Crate.SetPosition(high);
-		m_Crate.SC_Setup(SC_Settings.Pick(), SC_Settings.PickGun());
+		m_Crate.SC_Setup(SC_Settings.Pick(), SC_Settings.MixedGuns());   // the guns knob on "any"
 		m_Crate.Expansion_InitAirdrop(new array<ref ExpansionLoot>(), new TStringArray(), 0, 0, 4.5, 0);
 		Print("[SCTest] crate dropped from " + high);
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(WaitForLanding, 1000, false);
@@ -298,7 +420,7 @@ class CustomMission: MissionServer
 		// the config's own truck load if there is one, else one made here
 		foreach (SC_Drop configured : SC_Settings.Get().drops)
 		{
-			if (configured.name == "M3S truck")
+			if (configured.name == "M3S Covered")
 			{
 				StartPallet(configured);
 				return;
@@ -367,6 +489,14 @@ class CustomMission: MissionServer
 				Class.CastTo(truck, o);
 			if (o.IsInherited(ItemBase) && !EntityAI.Cast(o).GetHierarchyParent())
 				items += " " + o.GetType() + " (" + (o.GetPosition()[1] - GetGame().SurfaceY(o.GetPosition()[0], o.GetPosition()[2])) + " m up)";
+			if (o.GetType() == "SeaChest" && EntityAI.Cast(o).GetInventory().GetCargo())
+			{
+				CargoBase chest = EntityAI.Cast(o).GetInventory().GetCargo();
+				string inChest = "";
+				for (int chestI = 0; chestI < chest.GetItemCount(); chestI++)
+					inChest += " " + chest.GetItem(chestI).GetType();
+				Print("[SCTest] pallet: sea chest holds " + chest.GetItemCount() + ":" + inChest);
+			}
 		}
 		Print("[SCTest] pallet: " + tiles + " pallets, loose items:" + items);
 		if (truck)

@@ -23,7 +23,7 @@ modded class ExpansionMissionEventBase
 	[NonSerialized()]
 	SC_Drop m_SC_Drop;
 	[NonSerialized()]
-	SC_Gun m_SC_Gun;
+	ref SC_Gun m_SC_Gun;   // ref: a mix of guns is made for the drop, not in the config
 	[NonSerialized()]
 	bool m_SC_Blown;   // set by the crate when the self-destruct went off
 	[NonSerialized()]
@@ -121,12 +121,12 @@ modded class ExpansionMissionEventBase
 			drop = askedDrop;
 			vehicleBy = "by radio";
 		}
-		string gunBy = "random";
+		string gunBy = "nobody chose";
 		SC_Gun gun = SC_DropRadio.ChooseGun(radios);
 		if (gun)
 			gunBy = "by radio";
 		else
-			gun = SC_Settings.PickGun();
+			gun = SC_Settings.MixedGuns();   // "any": the boot full of different guns
 		string gunName = "no guns";
 		if (gun)
 			gunName = gun.name;
@@ -363,6 +363,29 @@ modded class ExpansionAirdropPlaneBase
 	}
 
 #ifdef SERVER
+	// The radios once more, as the crate leaves the plane: the load was chosen when the plane
+	// set off a couple of minutes ago, and the group may have retuned since. A tuned knob wins;
+	// an untuned one keeps what was chosen then.
+	protected void SC_ReadRadios()
+	{
+		SC_Config cfg = SC_Settings.Get();
+		vector below = GetPosition();
+		below[1] = g_Game.SurfaceY(below[0], below[2]);
+		array<SC_DropRadio> radios = SC_DropRadio.Carried(SC_Spot.GroupPlayers(below, cfg.clusterRadius));
+		SC_Drop drop = SC_DropRadio.ChooseDrop(radios);
+		if (drop && drop != m_SC_Mission.m_SC_Drop)
+		{
+			Print("[ShippingCrate] retuned since take-off: " + drop.name + " instead of " + m_SC_Mission.m_SC_Drop.name);
+			m_SC_Mission.m_SC_Drop = drop;
+		}
+		SC_Gun gun = SC_DropRadio.ChooseGun(radios);
+		if (gun && gun != m_SC_Mission.m_SC_Gun)
+		{
+			Print("[ShippingCrate] retuned since take-off: " + gun.name + " guns");
+			m_SC_Mission.m_SC_Gun = gun;
+		}
+	}
+
 	override ExpansionAirdropContainerBase Expansion_CreateDrop(string container)
 	{
 		if (!m_SC_Mission)
@@ -373,6 +396,7 @@ modded class ExpansionAirdropPlaneBase
 		if (Class.CastTo(crate, drop))
 		{
 			crate.m_SC_Mission = m_SC_Mission;
+			SC_ReadRadios();
 			crate.SC_Setup(m_SC_Mission.m_SC_Drop, m_SC_Mission.m_SC_Gun);
 		}
 		return drop;
@@ -452,6 +476,10 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	static const float EYES_ON = 1.0;                  // seconds the eyes glow with each "Evacuate!" (the clip's length)
 	static const string EYE = "SC_Prop_EyeRed";        // config.cpp: a round, gently glowing red ball
 	static const float EYE_SIZE = 0.018;               // across, metres
+	static const float WIGGLE_TURN = 12;               // degrees either way while it speaks
+	static const float WIGGLE_TURN_RATE = 9;           // radians a second
+	static const float WIGGLE_ROCK = 7;
+	static const float WIGGLE_ROCK_RATE = 14;
 	static const float EYES_BACK = 0.060;              // from the front of the bear's bounding box
 	static const string BLAST = "Plastic_Explosive_Ammo";
 
@@ -496,7 +524,12 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 					g_Game.ObjectDelete(part);
 			}
 			if (m_SC_Ride)
+			{
+#ifdef SERVER
+				SC_Leftovers.ForgetRide(m_SC_Ride);
+#endif
 				g_Game.ObjectDelete(m_SC_Ride);   // the crate went before it landed
+			}
 			m_SC_Ride = null;
 			m_SC_Parts.Clear();
 			m_SC_Box = null;
@@ -637,7 +670,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		dBodyActive(ride, ActiveState.INACTIVE);
 		if (m_SC_Drop && m_SC_Drop.vehicle)
 			SC_Spawn.Fill(ride, m_SC_Drop.vehicle, true);
-		if (m_SC_Gun)
+		if (m_SC_Gun && SC_Spawn.HasBoot(ride))
 		{
 			SC_Item kit = new SC_Item();
 			kit.cargo = m_SC_Gun.cargo;
@@ -645,9 +678,18 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		}
 		ride.SetLifetime(SC_Spawn.VEHICLE_LIFETIME);
 		m_SC_Ride = ride;
+		SC_Leftovers.RememberRide(m_SC_VehicleType + " on a pallet", SC_RideDropPoint(), ride);
 		ride.GetNetworkID(m_SC_RideLow, m_SC_RideHigh);
 		SetSynchDirty();
 		SC_PlaceRide();
+	}
+
+	// the ground under the crate, near enough where it will land (wind drifts it a little)
+	protected vector SC_RideDropPoint()
+	{
+		vector p = GetPosition();
+		p[1] = g_Game.SurfaceY(p[0], p[2]);
+		return p;
 	}
 
 	// the ride on the falling deck: the same frame clients draw the deck in
@@ -700,7 +742,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		if (!drop)
 		{
 			drop = SC_Settings.Pick();
-			SC_Setup(drop, SC_Settings.PickGun());
+			SC_Setup(drop, SC_Settings.MixedGuns());
 		}
 
 		vector pos = GetPosition();
@@ -725,6 +767,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			vector deck[2];
 			vector pf[4];
 			loaded = SC_Spawn.LoadPallet(drop, m_SC_VehicleType, m_SC_Gun, m_SC_Ride, pos, rest[2], m_SC_Parts, pf, deck);
+			SC_Leftovers.ForgetRide(m_SC_Ride);   // the landed pallet's entry covers it from here
 			m_SC_Ride = null;   // landed: an ordinary vehicle now
 			m_SC_RideLow = 0;
 			m_SC_RideHigh = 0;
@@ -768,6 +811,13 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			int warnAt = cfg.selfDestructMinutes * 60000;
 			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Warn, warnAt, false);
 			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Detonate, warnAt + cfg.warningSeconds * 1000, false);
+			// in case the server stops before then (SC_Leftovers.c)
+			vector lf[4];
+			lf[0] = m_SC_Frame[0];
+			lf[1] = m_SC_Frame[1];
+			lf[2] = m_SC_Frame[2];
+			lf[3] = m_SC_Frame[3];
+			SC_Leftovers.Remember(SC_CarrierName() + " with " + dropName, lf, m_SC_Min, m_SC_Max);
 		}
 	}
 
@@ -855,22 +905,13 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		int removed = 0;
 		if (m_SC_Parts.Count() > 0)
 		{
-			array<Object> objects = new array<Object>();
-			array<CargoBase> proxies = new array<CargoBase>();
-			g_Game.GetObjectsAtPosition(SC_Centre(), vector.Distance(m_SC_Min, m_SC_Max) * 0.5 + 1, objects, proxies);
-			foreach (Object obj : objects)
-			{
-				if (obj == this || m_SC_Parts.Find(obj) >= 0 || obj.IsMan() || obj.IsInherited(DayZCreature) || !obj.IsInherited(EntityAI))
-					continue;
-				EntityAI e = EntityAI.Cast(obj);
-				if (e.GetHierarchyParent())
-					continue;
-				vector rel = SC_WorldToFrame(obj.GetPosition());
-				if (rel[0] < m_SC_Min[0] - 0.2 || rel[0] > m_SC_Max[0] + 0.2 || rel[1] < m_SC_Min[1] - 0.5 || rel[1] > m_SC_Max[1] + 0.5 || rel[2] < m_SC_Min[2] - 0.2 || rel[2] > m_SC_Max[2] + 0.2)
-					continue;
-				g_Game.ObjectDelete(obj);
-				removed++;
-			}
+			vector lf[4];
+			lf[0] = m_SC_Frame[0];
+			lf[1] = m_SC_Frame[1];
+			lf[2] = m_SC_Frame[2];
+			lf[3] = m_SC_Frame[3];
+			removed = SC_Leftovers.ClearBox(lf, m_SC_Min, m_SC_Max, m_SC_Parts);
+			SC_Leftovers.Forget(lf[3]);
 		}
 		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + " removed with " + removed + " things on or in it");
 		g_Game.ObjectDelete(this);   // EEDelete takes the carrier; the mission ends
@@ -1260,6 +1301,8 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			bmat[0] = -f[2];
 			bmat[2] = f[0];
 		}
+		if (m_SC_Stage == 1 && m_SC_Time < m_SC_EyesUntil)
+			SC_Wiggle(bmat);   // while it speaks, turning and rocking on its bottom
 		bmat[3] = SC_Pallet.ToWorld(f, top) - (bmat[0] * bearBottom[0] + bmat[1] * bearBottom[1] + bmat[2] * bearBottom[2]);
 		m_SC_Bear.SetTransform(bmat);
 
@@ -1271,6 +1314,20 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 
 		if (m_SC_Stage == 1)
 			SC_Warning(bm);
+	}
+
+	// the bear's axes, turned a little from side to side and rocked (two rates, so it doesn't
+	// look mechanical); its position is worked out from them afterwards
+	protected void SC_Wiggle(inout vector m[4])
+	{
+		float turn = Math.Sin(m_SC_Time * WIGGLE_TURN_RATE) * WIGGLE_TURN * Math.DEG2RAD;
+		float rock = Math.Sin(m_SC_Time * WIGGLE_ROCK_RATE) * WIGGLE_ROCK * Math.DEG2RAD;
+		vector x = m[0] * Math.Cos(turn) + m[2] * Math.Sin(turn);
+		vector z = m[2] * Math.Cos(turn) - m[0] * Math.Sin(turn);
+		vector y = m[1];
+		m[0] = x * Math.Cos(rock) + y * Math.Sin(rock);
+		m[1] = y * Math.Cos(rock) - x * Math.Sin(rock);
+		m[2] = z;
 	}
 
 	string SC_ClientCarrierName()

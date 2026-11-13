@@ -202,9 +202,9 @@ class SC_Spawn
 			if (vehicle)
 			{
 				created++;
-				if (m_Ride)
+				if (m_Ride && HasBoot(vehicle))
 					gun = null;   // it came down with the kit already in it
-				if (gun)
+				if (gun && HasBoot(vehicle))
 				{
 					SC_Item kit = new SC_Item();
 					kit.cargo = gun.cargo;
@@ -224,8 +224,12 @@ class SC_Spawn
 			loose.Insert(dropItem);
 		if (gun)
 		{
-			foreach (SC_Item gunItem : gun.cargo)
-				loose.Insert(gunItem);
+			for (int g = 0; g < gun.cargo.Count(); g++)
+			{
+				if (gun.floorCount > 0 && g >= gun.floorCount)
+					break;   // a mix meant to fill a boot: one round of it is plenty on a floor
+				loose.Insert(gun.cargo[g]);
+			}
 		}
 		foreach (SC_Item spec : loose)
 		{
@@ -303,6 +307,12 @@ class SC_Spawn
 		return vehicle;
 	}
 
+	// somewhere to stow a gun kit (motorbikes have none: theirs goes on the floor)
+	static bool HasBoot(EntityAI vehicle)
+	{
+		return vehicle && vehicle.GetInventory() && vehicle.GetInventory().GetCargo() != null;
+	}
+
 	EntityAI FloorItem(string type, vector modelPos)
 	{
 		vector p = ToWorld(modelPos);
@@ -351,7 +361,8 @@ class SC_Spawn
 				EntityAI thing = item.GetInventory().CreateEntityInCargo(ct);
 				if (!thing)
 				{
-					Print("[ShippingCrate] " + item.GetType() + ": no room for " + ct);
+					if (!c.ifRoom)
+						Print("[ShippingCrate] " + item.GetType() + ": no room for " + ct);
 					continue;
 				}
 				Fill(thing, c);
@@ -397,6 +408,11 @@ class SC_Spawn
 			car.Fill(CarFluid.OIL, car.GetFluidCapacity(CarFluid.OIL));
 			car.Fill(CarFluid.COOLANT, car.GetFluidCapacity(CarFluid.COOLANT));
 			car.Fill(CarFluid.BRAKE, car.GetFluidCapacity(CarFluid.BRAKE));
+		}
+		MotorbikeScript bike;
+		if (spec.fluids && Class.CastTo(bike, item))
+		{
+			bike.Fill(MotorbikeFluid.FUEL, bike.GetFluidCapacity(MotorbikeFluid.FUEL));
 		}
 	}
 }

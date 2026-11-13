@@ -16,7 +16,7 @@ class SC_Pallet
 
 	// what fits the 20 ft container (inside about 6.0 x 2.3 x 2.4 m), body sizes without wheels
 	static const float FIT_LENGTH = 5.3;
-	static const float FIT_WIDTH = 2.25;
+	static const float FIT_WIDTH = 2.0;    // the body: wheels stick out past it (an M1025's 2.1 m body doesn't fit)
 	static const float FIT_HEIGHT = 2.35;
 
 	protected static ref map<string, ref array<vector>> s_Boxes = new map<string, ref array<vector>>();
