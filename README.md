@@ -167,6 +167,7 @@ fits every gun kit into every boot, and logs whatever didn't attach, load or fit
 | `tools/make_preview.py` | Draws the Workshop picture, `ShippingCrate/preview.png` |
 | `tools/make_loads.py` | Rebuilds the default loads and gun kits from vanilla's data |
 | `tools/make_sounds.py` | Speaks the bear's "Эвакуируйтесь!" with the espeak-ng library (packages `libespeak-ng1`, `espeak-ng-data`) |
+| `tools/make_radio.py` | Makes the delivery radio's orange model from vanilla's walkie-talkie |
 | `CHANGELOG.md` | One entry per release; the entry is also the Workshop change note |
 
 ## Testing

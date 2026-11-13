@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 - 2026-11-13
+
+- The delivery radio is bright orange, as it was meant to be (it came out black). Vanilla's
+  walkie-talkie model can't be retextured from config, so the radio is a copy of it with its
+  colour texture made solid orange (`tools/make_radio.py`); its damaged looks are vanilla's.
+
 ## 0.3 - 2026-11-13
 
 - Every vanilla car, truck and motorbike: Ada 4x4, Olga 24, Gunter 2, Sarka 120, M1025,
