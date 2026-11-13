@@ -400,7 +400,18 @@ class CustomMission: MissionServer
 		// blows, and the container and everything in it (the Ada, the hand truck) are removed
 		m_Crate.SC_Warn();
 		m_Crate.SC_Detonate();
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckBlown, 1000, false, "container", car);
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(AfterEnd, 4000, false, box, car);
+	}
+
+	// a second after the blast, before the removal: what was in or on the carrier is destroyed
+	// (or, with Better Explosions, already gone up and swapped for a wreck)
+	void CheckBlown(string carrier, EntityAI vehicle)
+	{
+		if (!vehicle)
+			Print("[SCTest] " + carrier + " blast: the vehicle went up (swapped for a wreck)");
+		else
+			Print("[SCTest] " + carrier + " blast: " + vehicle.GetType() + " ruined " + vehicle.IsRuined());
 	}
 
 	void AfterEnd(Building box, CarScript car)
@@ -519,6 +530,7 @@ class CustomMission: MissionServer
 			Print("[SCTest] pallet: no truck");
 		m_Pallet.SC_Warn();
 		m_Pallet.SC_Detonate();
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckBlown, 1000, false, "pallet", truck);
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(AfterPallet, 4000, false, truck);
 	}
 

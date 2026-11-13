@@ -1,8 +1,8 @@
 Expansion's airdrops, delivered by shipping container. When an Expansion Missions airdrop starts, the plane heads for the middle of the biggest group of players instead of a fixed town, and what comes down under two parachutes is a full-size shipping container, lit up and with a teddy bear on a stack of IEDs on the roof. Open the doors: a fitted-out, fuelled car, nose to the doors, its boot full of guns. Too big for a container (the M3S truck, the M1025)? It rides down on a pallet deck instead, with a sea chest full of explosives. No infected at the drop.
 
-Every new character gets a bright orange delivery radio: one knob picks the vehicle (every vanilla car, truck and motorbike), the other the guns (VSD, LAR, KA-M, SCR 16, SVAL, R12, M79, or a boot full of all of them). The next drop on your group brings what you're tuned to.
+Every new character gets a bright orange delivery radio: one knob picks the vehicle (every vanilla car, truck and motorbike, and with DayZ Expansion Vehicles the Land Rover, UAZ, Vodnik, bus, tractor and helicopters), the other the guns (VSD, LAR, KA-M, SCR 16, SVAL, R12, M79, or a boot full of all of them). The next drop on your group brings what you're tuned to.
 
-Ten minutes after landing the bear's eyes light up and it starts shouting "Evacuate!" in Russian. A minute later it all goes up, and the drop and everything left in it are removed, so they don't pile up on the server.
+Ten minutes after landing the bear's eyes light up and it starts shouting "Evacuate!" in Russian. A minute later it all goes up, along with everything still in or on it, and the drop and what's left are removed, so they don't pile up on the server.
 
 What comes down is a JSON file the server writes on its first start (profiles/ShippingCrate/ShippingCrate.json): any vehicle with any parts, anything in its boot, anything on the floor, any gun kits.
 

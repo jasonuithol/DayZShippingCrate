@@ -301,10 +301,20 @@ class SC_Spawn
 		p[1] = ToWorld(Inside(along, 0, 0))[1] - mm[0][1] + 0.1;
 		vehicle.SetPosition(p);
 		vehicle.SetOrientation(Vector(yaw, 0, 0));
-		vehicle.SetLifetime(VEHICLE_LIFETIME);
+		KeepLifetime(vehicle);
 		dBodyEnableGravity(vehicle, true);   // a vehicle that rode down had it off
 		dBodyActive(vehicle, ActiveState.ACTIVE);
 		return vehicle;
+	}
+
+	// A vehicle's lifetime, for good. SetLifetime alone doesn't last: anything attached to it or
+	// put in its cargo resets the lifetime to the CE's (types.xml), which for vanilla vehicles is
+	// 3 seconds, and the CE then deletes it as soon as no player is near. SetLifetimeMax is what
+	// those resets go back to.
+	static void KeepLifetime(EntityAI vehicle)
+	{
+		vehicle.SetLifetimeMax(VEHICLE_LIFETIME);
+		vehicle.SetLifetime(VEHICLE_LIFETIME);
 	}
 
 	// somewhere to stow a gun kit (motorbikes have none: theirs goes on the floor)
@@ -334,6 +344,8 @@ class SC_Spawn
 	// parts with CreateInInventory, which finds the free slot (four wheels and the spare).
 	static void Fill(EntityAI item, SC_Item spec, bool isVehicle = false)
 	{
+		if (isVehicle && spec.fit)
+			item.OnDebugSpawn();   // the vehicle's own kit; the fluids are topped up below
 		foreach (SC_Item a : spec.attachments)
 		{
 			for (int i = 0; i < SC_Settings.Count(a); i++)

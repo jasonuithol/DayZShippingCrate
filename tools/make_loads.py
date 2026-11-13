@@ -46,6 +46,31 @@ VEHICLES = [
     ("Sport bike", ["Motorbike_02_Red"], [], LOOSE),
 ]
 
+# Expansion Vehicles' (and Expansion Licensed's): no cfgspawnabletypes entries, so they're
+# fitted by their own debug-spawn routine ("fit"), which also gives each skin its matching
+# doors. A server without the mod skips these loads (SC_Settings drops a vehicle it hasn't
+# got). Boats are left out: a boat delivered inland is no use.
+EXPANSION = [
+    ("Land Rover", ["Expansion_Landrover", "Expansion_Landrover_Green", "Expansion_Landrover_Red", "Expansion_Landrover_Grey",
+                    "Expansion_Landrover_Blue", "Expansion_Landrover_Orange"], BOOT, LOOSE),
+    ("UAZ", ["ExpansionUAZ", "ExpansionUAZ_Green", "ExpansionUAZ_Black", "ExpansionUAZ_LightGreen"], BOOT, LOOSE),
+    ("UAZ Cargo", ["ExpansionUAZCargo", "ExpansionUAZCargo_Green", "ExpansionUAZCargo_Black", "ExpansionUAZCargo_LightGreen"], BOOT, LOOSE),
+    ("UAZ Roofless", ["ExpansionUAZRoofless", "ExpansionUAZRoofless_Green", "ExpansionUAZRoofless_Black",
+                      "ExpansionUAZRoofless_LightGreen"], BOOT, LOOSE),
+    ("Vodnik", ["ExpansionVodnik", "ExpansionVodnik_Camo", "ExpansionVodnik_CamoMedical"], BOOT, TRUCK_LOOSE),
+    ("Bus", ["ExpansionBus", "ExpansionBus_Blue", "ExpansionBus_Red", "ExpansionBus_Weeb"], BOOT, TRUCK_LOOSE),
+    ("Tractor", ["ExpansionTractor", "ExpansionTractor_Red", "ExpansionTractor_Blue", "ExpansionTractor_Green"], [], LOOSE),
+    ("Gyrocopter", ["ExpansionGyrocopter"], [], LOOSE),
+    ("MH-6", ["ExpansionMh6", "ExpansionMh6_Green", "ExpansionMh6_Black", "ExpansionMh6_Blueline", "ExpansionMh6_Digital",
+              "ExpansionMh6_Elliptical", "ExpansionMh6_Furious", "ExpansionMh6_GrayWatcher", "ExpansionMh6_Jeans",
+              "ExpansionMh6_Resistance", "ExpansionMh6_Shadow", "ExpansionMh6_Sheriff", "ExpansionMh6_Speedy",
+              "ExpansionMh6_Sunset", "ExpansionMh6_Vrana", "ExpansionMh6_Wasp", "ExpansionMh6_Wave"], BOOT, LOOSE),
+    ("UH-1H", ["ExpansionUh1h", "ExpansionUh1h_Green", "ExpansionUh1h_Civilian", "ExpansionUh1h_Medical",
+               "ExpansionUh1h_Uber", "ExpansionUh1h_Resistance"], BOOT, LOOSE),
+    ("Merlin", ["ExpansionMerlin", "ExpansionMerlin_Green", "ExpansionMerlin_Dahoman", "ExpansionMerlin_Ion",
+                "ExpansionMerlin_President", "ExpansionMerlin_Vrana", "ExpansionMerlin_Wave"], BOOT, TRUCK_LOOSE),
+]
+
 def counted(types):
     out = []
     for t in types:
@@ -62,6 +87,10 @@ for name, variants, boot, loose in VEHICLES:
         sys.exit("no parts for " + variants[0])
     vehicle = {"type": "|".join(variants), "fluids": True, "attachments": counted(p), "cargo": boot}
     drops.append({"name": name, "weight": 1, "carrier": "", "vehicle": vehicle, "items": loose})
+for name, variants, boot, loose in EXPANSION:
+    vehicle = {"type": "|".join(variants), "fluids": True, "fit": True, "attachments": [], "cargo": boot}
+    # Expansion Licensed has some of these without Expansion Vehicles, but not the scripts that fit them out
+    drops.append({"name": name, "weight": 1, "carrier": "", "needs": "DayZExpansion_Vehicles_Scripts", "vehicle": vehicle, "items": loose})
 
 # ---- guns ---------------------------------------------------------------------------------
 guns = {}

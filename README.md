@@ -118,6 +118,7 @@ that hadn't blown up yet are recorded in `profiles/ShippingCrate/landed.json` an
 | `fallSpeedScale` | How fast the drop falls, times Expansion's speed. |
 | `colours` | Which of the four vanilla containers to pick from: `Blue`, `Yellow`, `Orange`, `Red`. |
 | `drops` | The possible loads: the delivery radio's vehicle knob steps through them by `name`. Untuned, a drop picks one at random, weighted by `weight`. |
+| `drops[].needs` | Optional: a `CfgPatches` class the load needs. On a server without that mod the load is left out (the Expansion vehicles need `DayZExpansion_Vehicles_Scripts`). A vehicle class the server doesn't have is left out too. |
 | `drops[].carrier` | `"container"`, `"pallet"`, or left empty to choose by the vehicle's size. |
 | `drops[].vehicle` | Optional. In a container, parked front bumper 30 cm from the doors; on a pallet, at one end. |
 | `drops[].items` | Loose on the floor behind the vehicle (or across the whole floor if there's none), three to a row; on a pallet, on its free end. |
@@ -135,6 +136,7 @@ Every item, the vehicle included, takes:
 | `liquid` | Bottles, canisters, pots: `Water`, `CleanWater`, `Gasoline` (or `Petrol`), `Diesel`, `Vodka`, `Beer`, `Disinfectant`, `Saline`. Filled to the brim unless `quantity` says otherwise. |
 | `quantity` | 0..1 of the maximum (stack size, liquid, rounds). Left out: the game's default. |
 | `fluids` | Vehicles: fill fuel, oil, coolant and brake fluid. |
+| `fit` | Vehicles: fitted out by the vehicle's own debug-spawn routine first (wheels, parts, and doors that match its skin). The Expansion vehicles use this. |
 
 Anything that can't be created, attached or fitted in is skipped with a `[ShippingCrate]` line in
 the server's script log. If the file can't be read at all, airdrops stay vanilla Expansion and the

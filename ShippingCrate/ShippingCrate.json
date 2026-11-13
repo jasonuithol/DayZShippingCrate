@@ -476,6 +476,459 @@
                     "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
                 }
             ]
+        },
+        {
+            "name": "Land Rover",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "Expansion_Landrover|Expansion_Landrover_Green|Expansion_Landrover_Red|Expansion_Landrover_Grey|Expansion_Landrover_Blue|Expansion_Landrover_Orange",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "UAZ",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionUAZ|ExpansionUAZ_Green|ExpansionUAZ_Black|ExpansionUAZ_LightGreen",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "UAZ Cargo",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionUAZCargo|ExpansionUAZCargo_Green|ExpansionUAZCargo_Black|ExpansionUAZCargo_LightGreen",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "UAZ Roofless",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionUAZRoofless|ExpansionUAZRoofless_Green|ExpansionUAZRoofless_Black|ExpansionUAZRoofless_LightGreen",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Vodnik",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionVodnik|ExpansionVodnik_Camo|ExpansionVodnik_CamoMedical",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                },
+                {
+                    "type": "SeaChest",
+                    "cargo": [
+                        {
+                            "type": "RemoteDetonator",
+                            "count": 2
+                        },
+                        {
+                            "type": "Plastic_Explosive",
+                            "count": 3
+                        },
+                        {
+                            "type": "ImprovisedExplosive",
+                            "count": 2
+                        },
+                        {
+                            "type": "ClaymoreMine",
+                            "count": 2
+                        },
+                        {
+                            "type": "LandMineTrap",
+                            "count": 2
+                        },
+                        {
+                            "type": "M67Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "RGD5Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "FlashGrenade",
+                            "count": 2
+                        },
+                        {
+                            "type": "Grenade_ChemGas"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Green"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Purple"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Bus",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionBus|ExpansionBus_Blue|ExpansionBus_Red|ExpansionBus_Weeb",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                },
+                {
+                    "type": "SeaChest",
+                    "cargo": [
+                        {
+                            "type": "RemoteDetonator",
+                            "count": 2
+                        },
+                        {
+                            "type": "Plastic_Explosive",
+                            "count": 3
+                        },
+                        {
+                            "type": "ImprovisedExplosive",
+                            "count": 2
+                        },
+                        {
+                            "type": "ClaymoreMine",
+                            "count": 2
+                        },
+                        {
+                            "type": "LandMineTrap",
+                            "count": 2
+                        },
+                        {
+                            "type": "M67Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "RGD5Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "FlashGrenade",
+                            "count": 2
+                        },
+                        {
+                            "type": "Grenade_ChemGas"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Green"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Purple"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Tractor",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionTractor|ExpansionTractor_Red|ExpansionTractor_Blue|ExpansionTractor_Green",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": []
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Gyrocopter",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionGyrocopter",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": []
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "MH-6",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionMh6|ExpansionMh6_Green|ExpansionMh6_Black|ExpansionMh6_Blueline|ExpansionMh6_Digital|ExpansionMh6_Elliptical|ExpansionMh6_Furious|ExpansionMh6_GrayWatcher|ExpansionMh6_Jeans|ExpansionMh6_Resistance|ExpansionMh6_Shadow|ExpansionMh6_Sheriff|ExpansionMh6_Speedy|ExpansionMh6_Sunset|ExpansionMh6_Vrana|ExpansionMh6_Wasp|ExpansionMh6_Wave",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "UH-1H",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionUh1h|ExpansionUh1h_Green|ExpansionUh1h_Civilian|ExpansionUh1h_Medical|ExpansionUh1h_Uber|ExpansionUh1h_Resistance",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                }
+            ]
+        },
+        {
+            "name": "Merlin",
+            "weight": 1,
+            "carrier": "",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionMerlin|ExpansionMerlin_Green|ExpansionMerlin_Dahoman|ExpansionMerlin_Ion|ExpansionMerlin_President|ExpansionMerlin_Vrana|ExpansionMerlin_Wave",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": [
+                    {
+                        "type": "GlassBottle",
+                        "liquid": "Gasoline",
+                        "quantity": 1
+                    },
+                    {
+                        "type": "PetrolLighter"
+                    },
+                    {
+                        "type": "Rope"
+                    }
+                ]
+            },
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                },
+                {
+                    "type": "SeaChest",
+                    "cargo": [
+                        {
+                            "type": "RemoteDetonator",
+                            "count": 2
+                        },
+                        {
+                            "type": "Plastic_Explosive",
+                            "count": 3
+                        },
+                        {
+                            "type": "ImprovisedExplosive",
+                            "count": 2
+                        },
+                        {
+                            "type": "ClaymoreMine",
+                            "count": 2
+                        },
+                        {
+                            "type": "LandMineTrap",
+                            "count": 2
+                        },
+                        {
+                            "type": "M67Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "RGD5Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "FlashGrenade",
+                            "count": 2
+                        },
+                        {
+                            "type": "Grenade_ChemGas"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Green"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Purple"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
+                }
+            ]
         }
     ],
     "guns": [

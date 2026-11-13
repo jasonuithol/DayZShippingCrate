@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4 - 2026-11-13
+
+- The Expansion vehicles are on the delivery radio, on servers running DayZ Expansion Vehicles:
+  Land Rover, UAZ (and its Cargo and Roofless versions), Vodnik, Bus, Tractor, Gyrocopter, MH-6,
+  UH-1H and Merlin, in all their skins, fitted out by Expansion's own routine (`"fit": true`) and
+  fuelled. Boats are left out. A server without Expansion Vehicles leaves these loads out
+  (`"needs"`), and any load whose vehicle class it hasn't got.
+- Delivered vehicles no longer vanish. Putting anything in a vehicle (or on it) resets its
+  lifetime to the economy's, which is 3 seconds for vanilla vehicles, and the economy then
+  deleted it as soon as nobody was near: a car whose boot had just been filled with guns went
+  within a minute of landing. Its lifetime is now set as a maximum, so it lasts 45 days.
+- The self-destruct destroys everything in the container or on the pallet: the walls no longer
+  shield the car inside. Each thing takes the C4's hit directly (a fuelled vehicle goes up, as
+  any explosive sets it off), whatever survives is destroyed a moment later, and then it is all
+  removed as before.
+
 ## 0.3.1 - 2026-11-13
 
 - The delivery radio is bright orange, as it was meant to be (it came out black). Vanilla's

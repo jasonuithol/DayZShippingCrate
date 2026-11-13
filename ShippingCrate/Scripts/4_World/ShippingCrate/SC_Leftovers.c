@@ -151,16 +151,16 @@ class SC_Leftovers
 		return null;
 	}
 
-	// Delete every vehicle and item lying in the box mn..mx of frame f (a margin around it),
-	// not people or animals, nor anything in skip. Things inside them go with them.
-	static int ClearBox(vector f[4], vector mn, vector mx, array<Object> skip)
+	// Every vehicle and item lying in the box mn..mx of frame f (a margin around it), not people
+	// or animals, nor anything in skip, nor what is inside or on something else (it goes with that).
+	static array<EntityAI> InBox(vector f[4], vector mn, vector mx, array<Object> skip)
 	{
+		array<EntityAI> found = new array<EntityAI>();
 		vector centreLocal = (mn + mx) * 0.5;
 		vector centre = f[0] * centreLocal[0] + f[1] * centreLocal[1] + f[2] * centreLocal[2] + f[3];
 		array<Object> objects = new array<Object>();
 		array<CargoBase> proxies = new array<CargoBase>();
 		g_Game.GetObjectsAtPosition(centre, vector.Distance(mn, mx) * 0.5 + 1, objects, proxies);
-		int removed = 0;
 		foreach (Object obj : objects)
 		{
 			if (!obj || (skip && skip.Find(obj) >= 0) || obj.IsMan() || obj.IsInherited(DayZCreature) || !obj.IsInherited(EntityAI))
@@ -174,10 +174,18 @@ class SC_Leftovers
 			vector rel = Vector(vector.Dot(d, f[0]), vector.Dot(d, f[1]), vector.Dot(d, f[2]));
 			if (rel[0] < mn[0] - 0.2 || rel[0] > mx[0] + 0.2 || rel[1] < mn[1] - 0.5 || rel[1] > mx[1] + 0.5 || rel[2] < mn[2] - 0.2 || rel[2] > mx[2] + 0.2)
 				continue;
-			g_Game.ObjectDelete(obj);
-			removed++;
+			found.Insert(e);
 		}
-		return removed;
+		return found;
+	}
+
+	// Delete everything InBox. Things inside them go with them.
+	static int ClearBox(vector f[4], vector mn, vector mx, array<Object> skip)
+	{
+		array<EntityAI> found = InBox(f, mn, mx, skip);
+		foreach (EntityAI e : found)
+			g_Game.ObjectDelete(e);
+		return found.Count();
 	}
 
 	// The entries from before the restart, noted as the server starts: the clean-up comes a

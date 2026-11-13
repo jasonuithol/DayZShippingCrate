@@ -11,6 +11,7 @@ class SC_Item
 	string liquid;               // bottles, canisters, pots: Water, Gasoline, Diesel, Vodka, Beer...
 	string magazine;             // firearms: a magazine loaded into it, with a round chambered
 	bool fluids;                 // vehicles: fill fuel, oil, coolant and brake fluid
+	bool fit;                    // vehicles: fitted out by their own debug-spawn routine first (Expansion's: wheels, parts, doors to match the skin)
 	[NonSerialized()]
 	bool ifRoom;                 // made in script: no complaint when it doesn't fit (a boot filled up)
 	ref array<ref SC_Item> attachments = new array<ref SC_Item>();
@@ -26,6 +27,7 @@ class SC_Drop
 	float weight = 1;            // how often this load comes up relative to the others
 	ref SC_Item vehicle;         // optional
 	string carrier;              // "container", "pallet", or left out: whichever the vehicle fits
+	string needs;                // optional: a CfgPatches class (a mod) the load needs; left out on a server without it
 	ref array<ref SC_Item> items = new array<ref SC_Item>();
 }
 
@@ -152,6 +154,28 @@ class SC_Settings
 			foreach (SC_Item gi : g.cargo)
 				SanitiseItem(gi);
 		}
+		// loads for a mod or vehicles this server hasn't got (Expansion Vehicles' on a server
+		// without it) are left out, and so are the variants it hasn't got
+		for (int di = c.drops.Count() - 1; di >= 0; di--)
+		{
+			SC_Drop drop = c.drops[di];
+			if (drop.needs != "" && !g_Game.ConfigIsExisting("CfgPatches " + drop.needs))
+			{
+				Print("[ShippingCrate] no " + drop.needs + " on this server: load \"" + drop.name + "\" left out");
+				c.drops.Remove(di);
+				continue;
+			}
+			if (!drop.vehicle || drop.vehicle.type == "")
+				continue;
+			string have = ExistingTypes(drop.vehicle.type);
+			if (have == "")
+			{
+				Print("[ShippingCrate] no " + drop.vehicle.type + " on this server: load \"" + drop.name + "\" left out");
+				c.drops.Remove(di);
+			}
+			else
+				drop.vehicle.type = have;
+		}
 		foreach (SC_Drop d : c.drops)
 		{
 			if (d.weight <= 0)
@@ -163,6 +187,24 @@ class SC_Settings
 			foreach (SC_Item i : d.items)
 				SanitiseItem(i);
 		}
+	}
+
+	// the classes of "A|B|C" that exist, "|"-joined
+	protected static string ExistingTypes(string types)
+	{
+		array<string> all = new array<string>();
+		types.Split("|", all);
+		string have = "";
+		foreach (string t : all)
+		{
+			t = t.Trim();
+			if (t == "" || !g_Game.ConfigIsExisting("CfgVehicles " + t))
+				continue;
+			if (have != "")
+				have += "|";
+			have += t;
+		}
+		return have;
 	}
 
 	protected static void SanitiseItem(SC_Item i)

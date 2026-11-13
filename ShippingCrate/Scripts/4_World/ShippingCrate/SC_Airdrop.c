@@ -482,6 +482,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	static const float WIGGLE_ROCK_RATE = 14;
 	static const float EYES_BACK = 0.060;              // from the front of the bear's bounding box
 	static const string BLAST = "Plastic_Explosive_Ammo";
+	static const int RUIN_AFTER_MS = 700;   // after the contents' hit: Better Explosions sets a vehicle off within 0.5 s
 
 	void ShippingCrate_Airdrop()
 	{
@@ -676,7 +677,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			kit.cargo = m_SC_Gun.cargo;
 			SC_Spawn.Fill(ride, kit, true);
 		}
-		ride.SetLifetime(SC_Spawn.VEHICLE_LIFETIME);
+		SC_Spawn.KeepLifetime(ride);
 		m_SC_Ride = ride;
 		SC_Leftovers.RememberRide(m_SC_VehicleType + " on a pallet", SC_RideDropPoint(), ride);
 		ride.GetNetworkID(m_SC_RideLow, m_SC_RideHigh);
@@ -829,6 +830,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(SC_Detonate);
 		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(SC_Remove);
 		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(SC_Blast);
+		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).Remove(SC_RuinContents);
 	}
 
 	// member arrays can't be passed as out parameters: copied in from a local one
@@ -889,8 +891,43 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			p[axis] = p[axis] + i * 1.2;
 			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Blast, 150 * (i + 1), false, SC_FrameToWorld(p));
 		}
-		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + " blew up");
+		int hit = SC_HitContents();
+		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + " blew up, " + hit + " things in or on it hit");
+		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_RuinContents, RUIN_AFTER_MS, false);
 		g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Remove, 2000, false);
+	}
+
+	// what is in or on the carrier now
+	protected array<EntityAI> SC_Contents()
+	{
+		vector lf[4];
+		lf[0] = m_SC_Frame[0];
+		lf[1] = m_SC_Frame[1];
+		lf[2] = m_SC_Frame[2];
+		lf[3] = m_SC_Frame[3];
+		return SC_Leftovers.InBox(lf, m_SC_Min, m_SC_Max, m_SC_Parts);
+	}
+
+	// The blast reaches whatever is in or on the carrier however it's shielded (a container's
+	// walls stop the area damage): each takes the C4's hit directly, so a fuelled vehicle goes up
+	// the way any explosive sets it off (Better Explosions, if the server runs it, wrecks it).
+	protected int SC_HitContents()
+	{
+		array<EntityAI> contents = SC_Contents();
+		foreach (EntityAI e : contents)
+			e.ProcessDirectDamage(DamageType.EXPLOSION, this, "", BLAST, "0 0 0", 1.0);
+		return contents.Count();
+	}
+
+	// ... and whatever survived the hit is destroyed anyway (after any vehicle has gone up)
+	protected void SC_RuinContents()
+	{
+		array<EntityAI> contents = SC_Contents();   // held: a returned array isn't kept alive by foreach
+		foreach (EntityAI e : contents)
+		{
+			if (e && !e.IsRuined())
+				e.SetHealth("", "", 0);
+		}
 	}
 
 	void SC_Blast(vector at)
