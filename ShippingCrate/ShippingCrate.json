@@ -1,11 +1,10 @@
 {
     "enabled": true,
-    "clusterRadius": 1000,
     "dropRadius": 1,
-    "searchRadius": 200,
+    "searchRadius": 50,
     "maxSlope": 8,
     "openDoors": false,
-    "selfDestructMinutes": 10,
+    "selfDestructMinutes": -1,
     "warningSeconds": 60,
     "fallSpeedScale": 1,
     "colours": [
@@ -15,6 +14,408 @@
         "Red"
     ],
     "drops": [
+        {
+            "name": "Equipment",
+            "weight": 1,
+            "carrier": "container",
+            "items": [
+                {
+                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
+                },
+                {
+                    "type": "Barrel_Green",
+                    "cargo": [
+                        {
+                            "type": "SVD",
+                            "magazine": "Mag_SVD_10Rnd",
+                            "attachments": [
+                                {
+                                    "type": "PSO1Optic"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Mag_SVD_10Rnd",
+                            "count": 2
+                        },
+                        {
+                            "type": "FAL",
+                            "magazine": "Mag_FAL_20Rnd",
+                            "attachments": [
+                                {
+                                    "type": "Fal_FoldingBttstck"
+                                },
+                                {
+                                    "type": "M68Optic"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Mag_FAL_20Rnd",
+                            "count": 2
+                        },
+                        {
+                            "type": "AKM",
+                            "magazine": "Mag_AKM_30Rnd",
+                            "attachments": [
+                                {
+                                    "type": "AK_WoodBttstck"
+                                },
+                                {
+                                    "type": "AK_WoodHndgrd"
+                                },
+                                {
+                                    "type": "PSO1Optic"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Mag_AKM_30Rnd",
+                            "count": 2
+                        },
+                        {
+                            "type": "SCARL|SCARL_Black",
+                            "magazine": "Mag_STANAG_30Rnd",
+                            "attachments": [
+                                {
+                                    "type": "SCAR_StockBttstck"
+                                },
+                                {
+                                    "type": "ACOGOptic"
+                                },
+                                {
+                                    "type": "UniversalLight",
+                                    "attachments": [
+                                        {
+                                            "type": "Battery9V"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Mag_STANAG_30Rnd",
+                            "count": 2
+                        },
+                        {
+                            "type": "ASVAL",
+                            "magazine": "Mag_VAL_20Rnd",
+                            "attachments": [
+                                {
+                                    "type": "M68Optic"
+                                },
+                                {
+                                    "type": "UniversalLight",
+                                    "attachments": [
+                                        {
+                                            "type": "Battery9V"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Mag_VAL_20Rnd",
+                            "count": 2
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Red",
+                    "cargo": [
+                        {
+                            "type": "BandageDressing",
+                            "count": 4
+                        },
+                        {
+                            "type": "SalineBagIV",
+                            "count": 2
+                        },
+                        {
+                            "type": "Morphine",
+                            "count": 2
+                        },
+                        {
+                            "type": "Epinephrine",
+                            "count": 2
+                        },
+                        {
+                            "type": "VitaminBottle"
+                        },
+                        {
+                            "type": "TetracyclineAntibiotics"
+                        },
+                        {
+                            "type": "CharcoalTablets"
+                        },
+                        {
+                            "type": "PainkillerTablets"
+                        },
+                        {
+                            "type": "BakedBeansCan",
+                            "count": 3
+                        },
+                        {
+                            "type": "TacticalBaconCan",
+                            "count": 3
+                        },
+                        {
+                            "type": "SardinesCan",
+                            "count": 2
+                        },
+                        {
+                            "type": "PeachesCan",
+                            "count": 2
+                        },
+                        {
+                            "type": "WaterBottle",
+                            "count": 2,
+                            "liquid": "Water",
+                            "quantity": 1
+                        },
+                        {
+                            "type": "CanOpener"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Blue",
+                    "cargo": [
+                        {
+                            "type": "GorkaEJacket_Summer"
+                        },
+                        {
+                            "type": "GorkaPants_Summer"
+                        },
+                        {
+                            "type": "MilitaryBoots_Black"
+                        },
+                        {
+                            "type": "TacticalGloves_Black"
+                        },
+                        {
+                            "type": "BallisticHelmet_Black"
+                        },
+                        {
+                            "type": "PlateCarrierVest"
+                        },
+                        {
+                            "type": "MilitaryBelt"
+                        },
+                        {
+                            "type": "Balaclava3Holes_Black"
+                        },
+                        {
+                            "type": "AviatorGlasses"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Blue",
+                    "cargo": [
+                        {
+                            "type": "AliceBag_Green"
+                        },
+                        {
+                            "type": "SmershVest"
+                        },
+                        {
+                            "type": "M65Jacket_Black"
+                        },
+                        {
+                            "type": "CargoPants_Black"
+                        },
+                        {
+                            "type": "CombatBoots_Black"
+                        },
+                        {
+                            "type": "WorkingGloves_Black"
+                        },
+                        {
+                            "type": "BaseballCap_Black"
+                        },
+                        {
+                            "type": "ChestHolster"
+                        },
+                        {
+                            "type": "HuntingJacket_Autumn"
+                        },
+                        {
+                            "type": "HunterPants_Autumn"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Yellow",
+                    "cargo": [
+                        {
+                            "type": "Hammer"
+                        },
+                        {
+                            "type": "Hatchet"
+                        },
+                        {
+                            "type": "Shovel"
+                        },
+                        {
+                            "type": "Pliers"
+                        },
+                        {
+                            "type": "Hacksaw"
+                        },
+                        {
+                            "type": "NailBox",
+                            "count": 3
+                        },
+                        {
+                            "type": "MetalWire",
+                            "count": 2
+                        },
+                        {
+                            "type": "BarbedWire"
+                        },
+                        {
+                            "type": "CombinationLock4"
+                        },
+                        {
+                            "type": "FenceKit",
+                            "count": 2
+                        },
+                        {
+                            "type": "WatchtowerKit"
+                        },
+                        {
+                            "type": "TerritoryFlagKit"
+                        },
+                        {
+                            "type": "Rope"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Green",
+                    "cargo": [
+                        {
+                            "type": "NVGoggles",
+                            "attachments": [
+                                {
+                                    "type": "Battery9V"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Headtorch_Black",
+                            "attachments": [
+                                {
+                                    "type": "Battery9V"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "Battery9V",
+                            "count": 4
+                        },
+                        {
+                            "type": "Binoculars"
+                        },
+                        {
+                            "type": "Lockpick"
+                        },
+                        {
+                            "type": "Screwdriver"
+                        },
+                        {
+                            "type": "SewingKit"
+                        },
+                        {
+                            "type": "LeatherSewingKit"
+                        },
+                        {
+                            "type": "WeaponCleaningKit"
+                        },
+                        {
+                            "type": "ElectronicRepairKit"
+                        },
+                        {
+                            "type": "TireRepairKit"
+                        },
+                        {
+                            "type": "EpoxyPutty"
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Red",
+                    "cargo": [
+                        {
+                            "type": "RemoteDetonator",
+                            "count": 2
+                        },
+                        {
+                            "type": "Plastic_Explosive",
+                            "count": 3
+                        },
+                        {
+                            "type": "ImprovisedExplosive",
+                            "count": 2
+                        },
+                        {
+                            "type": "ClaymoreMine",
+                            "count": 2
+                        },
+                        {
+                            "type": "LandMineTrap",
+                            "count": 2
+                        },
+                        {
+                            "type": "M67Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "RGD5Grenade",
+                            "count": 3
+                        },
+                        {
+                            "type": "FlashGrenade",
+                            "count": 2
+                        },
+                        {
+                            "type": "Grenade_ChemGas"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Green"
+                        },
+                        {
+                            "type": "M18SmokeGrenade_Red"
+                        },
+                        {
+                            "type": "RDG2SmokeGrenade_Black"
+                        }
+                    ]
+                },
+                {
+                    "type": "MilitaryBelt",
+                    "attachments": [
+                        {
+                            "type": "Canteen",
+                            "liquid": "Water",
+                            "quantity": 1
+                        },
+                        {
+                            "type": "NylonKnifeSheath",
+                            "attachments": [
+                                {
+                                    "type": "CombatKnife"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "PlateCarrierHolster"
+                        }
+                    ]
+                }
+            ]
+        },
         {
             "name": "Ada 4x4",
             "weight": 1,
@@ -53,25 +454,9 @@
                         "type": "HatchbackTrunk"
                     }
                 ],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Olga 24",
@@ -117,25 +502,9 @@
                         "type": "CivSedanTrunk"
                     }
                 ],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Gunter 2",
@@ -181,25 +550,9 @@
                         "type": "Hatchback_02_Trunk"
                     }
                 ],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Sarka 120",
@@ -245,25 +598,9 @@
                         "type": "Sedan_02_Trunk"
                     }
                 ],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "M1025",
@@ -306,25 +643,9 @@
                         "type": "CarBattery"
                     }
                 ],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "M3S Covered",
@@ -361,60 +682,7 @@
                 ],
                 "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                },
-                {
-                    "type": "SeaChest",
-                    "cargo": [
-                        {
-                            "type": "RemoteDetonator",
-                            "count": 2
-                        },
-                        {
-                            "type": "Plastic_Explosive",
-                            "count": 3
-                        },
-                        {
-                            "type": "ImprovisedExplosive",
-                            "count": 2
-                        },
-                        {
-                            "type": "ClaymoreMine",
-                            "count": 2
-                        },
-                        {
-                            "type": "LandMineTrap",
-                            "count": 2
-                        },
-                        {
-                            "type": "M67Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "RGD5Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "FlashGrenade",
-                            "count": 2
-                        },
-                        {
-                            "type": "Grenade_ChemGas"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Green"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Purple"
-                        }
-                    ]
-                },
-                {
-                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Motorbike",
@@ -436,11 +704,7 @@
                 ],
                 "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Sport bike",
@@ -471,11 +735,7 @@
                 ],
                 "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Land Rover",
@@ -487,25 +747,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "UAZ",
@@ -517,25 +761,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "UAZ Cargo",
@@ -547,25 +775,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "UAZ Roofless",
@@ -577,25 +789,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Vodnik",
@@ -607,74 +803,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                },
-                {
-                    "type": "SeaChest",
-                    "cargo": [
-                        {
-                            "type": "RemoteDetonator",
-                            "count": 2
-                        },
-                        {
-                            "type": "Plastic_Explosive",
-                            "count": 3
-                        },
-                        {
-                            "type": "ImprovisedExplosive",
-                            "count": 2
-                        },
-                        {
-                            "type": "ClaymoreMine",
-                            "count": 2
-                        },
-                        {
-                            "type": "LandMineTrap",
-                            "count": 2
-                        },
-                        {
-                            "type": "M67Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "RGD5Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "FlashGrenade",
-                            "count": 2
-                        },
-                        {
-                            "type": "Grenade_ChemGas"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Green"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Purple"
-                        }
-                    ]
-                },
-                {
-                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Bus",
@@ -686,79 +817,14 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                },
-                {
-                    "type": "SeaChest",
-                    "cargo": [
-                        {
-                            "type": "RemoteDetonator",
-                            "count": 2
-                        },
-                        {
-                            "type": "Plastic_Explosive",
-                            "count": 3
-                        },
-                        {
-                            "type": "ImprovisedExplosive",
-                            "count": 2
-                        },
-                        {
-                            "type": "ClaymoreMine",
-                            "count": 2
-                        },
-                        {
-                            "type": "LandMineTrap",
-                            "count": 2
-                        },
-                        {
-                            "type": "M67Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "RGD5Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "FlashGrenade",
-                            "count": 2
-                        },
-                        {
-                            "type": "Grenade_ChemGas"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Green"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Purple"
-                        }
-                    ]
-                },
-                {
-                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Tractor",
             "weight": 1,
-            "carrier": "",
+            "carrier": "pallet",
             "needs": "DayZExpansion_Vehicles_Scripts",
             "vehicle": {
                 "type": "ExpansionTractor|ExpansionTractor_Red|ExpansionTractor_Blue|ExpansionTractor_Green",
@@ -767,16 +833,12 @@
                 "attachments": [],
                 "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Gyrocopter",
             "weight": 1,
-            "carrier": "",
+            "carrier": "pallet",
             "needs": "DayZExpansion_Vehicles_Scripts",
             "vehicle": {
                 "type": "ExpansionGyrocopter",
@@ -785,11 +847,7 @@
                 "attachments": [],
                 "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "MH-6",
@@ -801,25 +859,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "UH-1H",
@@ -831,25 +873,9 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                }
-            ]
+            "items": []
         },
         {
             "name": "Merlin",
@@ -861,74 +887,39 @@
                 "fluids": true,
                 "fit": true,
                 "attachments": [],
-                "cargo": [
-                    {
-                        "type": "GlassBottle",
-                        "liquid": "Gasoline",
-                        "quantity": 1
-                    },
-                    {
-                        "type": "PetrolLighter"
-                    },
-                    {
-                        "type": "Rope"
-                    }
-                ]
+                "cargo": []
             },
-            "items": [
-                {
-                    "type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"
-                },
-                {
-                    "type": "SeaChest",
-                    "cargo": [
-                        {
-                            "type": "RemoteDetonator",
-                            "count": 2
-                        },
-                        {
-                            "type": "Plastic_Explosive",
-                            "count": 3
-                        },
-                        {
-                            "type": "ImprovisedExplosive",
-                            "count": 2
-                        },
-                        {
-                            "type": "ClaymoreMine",
-                            "count": 2
-                        },
-                        {
-                            "type": "LandMineTrap",
-                            "count": 2
-                        },
-                        {
-                            "type": "M67Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "RGD5Grenade",
-                            "count": 3
-                        },
-                        {
-                            "type": "FlashGrenade",
-                            "count": 2
-                        },
-                        {
-                            "type": "Grenade_ChemGas"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Green"
-                        },
-                        {
-                            "type": "M18SmokeGrenade_Purple"
-                        }
-                    ]
-                },
-                {
-                    "type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"
-                }
-            ]
+            "items": []
+        },
+        {
+            "name": "Zodiac",
+            "weight": 1,
+            "carrier": "pallet",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionZodiacBoat|ExpansionZodiacBoat_Orange|ExpansionZodiacBoat_Green|ExpansionZodiacBoat_Black",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": []
+            },
+            "items": [],
+            "water": true
+        },
+        {
+            "name": "Utility Boat",
+            "weight": 1,
+            "carrier": "pallet",
+            "needs": "DayZExpansion_Vehicles_Scripts",
+            "vehicle": {
+                "type": "ExpansionUtilityBoat|ExpansionUtilityBoat_Black|ExpansionUtilityBoat_Green",
+                "fluids": true,
+                "fit": true,
+                "attachments": [],
+                "cargo": []
+            },
+            "items": [],
+            "water": true
         }
     ],
     "guns": [

@@ -98,12 +98,14 @@ class SC_Spawn
 		s.m_FloorY = deck[1][1];
 		s.m_OnPallet = true;
 		s.m_Ride = ride;
+		s.m_Water = drop && drop.water;
 		Print("[ShippingCrate] pallet " + nx + " x " + nz + " (" + (deck[1] - deck[0]) + ") for " + vehicleType);
 		return s.LoadDrop(drop, vehicleType, gun);
 	}
 
 	bool m_OnPallet;
 	EntityAI m_Ride;   // a vehicle that already exists, fitted and loaded: just put it in place
+	bool m_Water;      // a boat: the pallet is on the bottom, the boat goes on the water above it
 
 	vector ToWorld(vector p)
 	{
@@ -277,9 +279,24 @@ class SC_Spawn
 		float yaw = dir.VectorToAngles()[0];
 
 		EntityAI vehicle = m_Ride;
+		vector made = ToWorld(Inside(0, 0, 1));
+		if (m_Water)
+		{
+			// A boat that rode down asleep sinks: Expansion only floats boats it woke itself, on
+			// the water, as they were made (ExpansionBoatScript.DeferredInit). So the one that
+			// rode down goes, and a new one is made on the surface over the pallet.
+			if (vehicle)
+			{
+				SC_Leftovers.ForgetRide(vehicle);
+				g_Game.ObjectDelete(vehicle);
+				vehicle = null;
+				m_Ride = null;
+			}
+			made[1] = SC_Spot.WaterY(made[0], made[2]) + 1;
+		}
 		if (!vehicle)
 		{
-			vehicle = EntityAI.Cast(g_Game.CreateObjectEx(type, ToWorld(Inside(0, 0, 1)), ECE_CREATEPHYSICS | ECE_UPDATEPATHGRAPH));
+			vehicle = EntityAI.Cast(g_Game.CreateObjectEx(type, made, ECE_CREATEPHYSICS | ECE_UPDATEPATHGRAPH));
 			if (!vehicle)
 			{
 				Print("[ShippingCrate] could not create vehicle " + type);
@@ -299,6 +316,8 @@ class SC_Spawn
 		vector offset = vehicle.VectorToParent(Vector((mm[0][0] + mm[1][0]) * 0.5, 0, (mm[0][2] + mm[1][2]) * 0.5));
 		p = p - offset;
 		p[1] = ToWorld(Inside(along, 0, 0))[1] - mm[0][1] + 0.1;
+		if (m_Water)
+			p[1] = Math.Max(p[1], SC_Spot.WaterY(p[0], p[2]) - mm[0][1] * 0.3);   // floating, its hull a little in the water
 		vehicle.SetPosition(p);
 		vehicle.SetOrientation(Vector(yaw, 0, 0));
 		KeepLifetime(vehicle);
@@ -365,6 +384,11 @@ class SC_Spawn
 			}
 		}
 
+		// a barrel takes nothing in while it's shut: opened to fill, shut again after
+		Barrel_ColorBase barrel;
+		bool shut = spec.cargo.Count() > 0 && Class.CastTo(barrel, item) && !barrel.IsOpen();
+		if (shut)
+			barrel.Open();
 		foreach (SC_Item c : spec.cargo)
 		{
 			for (int j = 0; j < SC_Settings.Count(c); j++)
@@ -380,6 +404,8 @@ class SC_Spawn
 				Fill(thing, c);
 			}
 		}
+		if (shut)
+			barrel.Close();
 
 		Properties(item, spec);
 	}

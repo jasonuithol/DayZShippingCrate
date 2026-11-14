@@ -1,5 +1,5 @@
-// Where the container goes: the centre of the biggest group of living players, moved to the
-// nearest flat, dry, clear ground big enough for it.
+// Where the delivery goes: where the player ordered it, moved to the nearest flat, dry, clear
+// ground big enough for it.
 class SC_Spot
 {
 	static const float CLEAR_RADIUS = 9;     // nothing solid this close (the container is ~6 m long)
@@ -18,62 +18,6 @@ class SC_Spot
 				positions.Insert(player.GetPosition());
 		}
 		return positions;
-	}
-
-	// the living players within radius of centre
-	static array<PlayerBase> GroupPlayers(vector centre, float radius)
-	{
-		array<PlayerBase> group = new array<PlayerBase>();
-		array<Man> men = new array<Man>();
-		g_Game.GetPlayers(men);
-		float r2 = radius * radius;
-		foreach (Man man : men)
-		{
-			PlayerBase player;
-			if (Class.CastTo(player, man) && player.IsAlive() && Dist2D2(player.GetPosition(), centre) <= r2)
-				group.Insert(player);
-		}
-		return group;
-	}
-
-	// Centre of the biggest group: for each player, everyone within radius of them; the player
-	// with the most neighbours wins, and the drop goes to the average of that group.
-	static bool Cluster(array<vector> positions, float radius, out vector centre, out int size)
-	{
-		size = 0;
-		if (positions.Count() == 0)
-			return false;
-
-		float r2 = radius * radius;
-		int best = -1;
-		for (int i = 0; i < positions.Count(); i++)
-		{
-			int n = 0;
-			for (int j = 0; j < positions.Count(); j++)
-			{
-				if (Dist2D2(positions[i], positions[j]) <= r2)
-					n++;
-			}
-			if (n > size)
-			{
-				size = n;
-				best = i;
-			}
-		}
-
-		vector sum = "0 0 0";
-		int members = 0;
-		for (int k = 0; k < positions.Count(); k++)
-		{
-			if (Dist2D2(positions[best], positions[k]) <= r2)
-			{
-				sum = sum + positions[k];
-				members++;
-			}
-		}
-		centre = sum * (1.0 / members);
-		centre[1] = g_Game.SurfaceY(centre[0], centre[2]);
-		return true;
 	}
 
 	static float Dist2D2(vector a, vector b)
@@ -137,6 +81,80 @@ class SC_Spot
 		array<Object> objects = new array<Object>();
 		array<CargoBase> proxies = new array<CargoBase>();
 		g_Game.GetObjectsAtPosition(p, CLEAR_RADIUS, objects, proxies);
+		foreach (Object obj : objects)
+		{
+			if (obj.IsBush() || obj.IsInherited(ItemBase) || obj.IsInherited(DayZCreature))
+				continue;
+			return false;
+		}
+		return true;
+	}
+
+	static const float WATER_CLEAR = 8;      // open water this far around a boat's spot
+	static const float WATER_DEPTH = 1.5;    // and at least this deep under it
+
+	// The nearest open water within searchRadius of centre: sea or pond under the spot and all
+	// round it, deep enough, and nothing solid there (rocks, piers, wrecks, other boats). Its
+	// height is the water's surface. False if there's none.
+	static bool WaterSpot(vector centre, float searchRadius, out vector spot)
+	{
+		for (float r = 0; r <= searchRadius; r += 5)
+		{
+			int steps = 1;
+			if (r > 0)
+				steps = Math.Max(8, Math.Round(Math.PI2 * r / 5));
+			float start = Math.RandomFloat(0, Math.PI2);
+			for (int s = 0; s < steps; s++)
+			{
+				float a = start + Math.PI2 * s / steps;
+				float x = centre[0] + Math.Cos(a) * r;
+				float z = centre[2] + Math.Sin(a) * r;
+				if (OpenWater(x, z))
+				{
+					spot = Vector(x, WaterY(x, z), z);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	static bool IsWater(float x, float z)
+	{
+		return g_Game.SurfaceIsSea(x, z) || g_Game.SurfaceIsPond(x, z);
+	}
+
+	// the water's surface at x, z (without the waves)
+	static float WaterY(float x, float z)
+	{
+		float bottom = g_Game.SurfaceY(x, z);
+		return g_Game.GetWaterSurfaceHeightNoFakeWave(Vector(x, bottom + 100, z));
+	}
+
+	static bool OpenWater(float x, float z)
+	{
+		float size = g_Game.GetWorld().GetWorldSize();
+		if (x < EDGE_MARGIN || z < EDGE_MARGIN || x > size - EDGE_MARGIN || z > size - EDGE_MARGIN)
+			return false;
+		if (!IsWater(x, z))
+			return false;
+		float surface = WaterY(x, z);
+		for (int i = 0; i <= 8; i++)
+		{
+			float px = x;
+			float pz = z;
+			if (i > 0)
+			{
+				float a = Math.PI2 * i / 8;
+				px = x + Math.Cos(a) * WATER_CLEAR;
+				pz = z + Math.Sin(a) * WATER_CLEAR;
+			}
+			if (!IsWater(px, pz) || surface - g_Game.SurfaceY(px, pz) < WATER_DEPTH)
+				return false;
+		}
+		array<Object> objects = new array<Object>();
+		array<CargoBase> proxies = new array<CargoBase>();
+		g_Game.GetObjectsAtPosition(Vector(x, surface, z), WATER_CLEAR, objects, proxies);
 		foreach (Object obj : objects)
 		{
 			if (obj.IsBush() || obj.IsInherited(ItemBase) || obj.IsInherited(DayZCreature))

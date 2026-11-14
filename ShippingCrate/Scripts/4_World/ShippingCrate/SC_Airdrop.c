@@ -1,159 +1,143 @@
-// The hooks into Expansion Missions' airdrops.
+// Deliveries, ordered on the delivery radio (hold it: "Order drop here").
 //
-// 1. When an airdrop mission starts, its drop location is moved to the centre of the biggest
-//    group of players (on flat, clear ground) and its infected count set to zero.
+// 1. The order sends one of Expansion's airdrop planes (the one supply signals use, not a
+//    mission) to flat, clear ground where the player stood, carrying what the radio is tuned to.
 // 2. Its plane drops a ShippingCrate_Airdrop instead of the usual crate: Expansion's own crate,
 //    falling the usual way, but with no loot and no infected. Clients don't draw it: they draw a
-//    shipping container hanging under two parachutes in its place.
-// 3. When it comes to rest the server puts the real container there and loads it from the
-//    config. The crate itself is parked out of sight under the container floor, so Expansion's
-//    own rule still ends the mission (time up and nobody within 1100 m); when Expansion deletes
-//    the crate, the container goes with it. The vehicle and everything else stays.
+//    shipping container (or a pallet with the vehicle on it) hanging under parachutes in its place.
+// 3. When it comes to rest the server puts the real carrier there and loads it from the config.
+//    The crate itself is parked out of sight under it until the self-destruct, which removes
+//    the carrier, everything on or in it, and the crate.
 //
-// Player-called airdrops (supply signals) are left alone: only missions are hijacked.
-//
-// ExpansionMissionEventAirdrop itself can't be modded (it hands itself to a JSON template, which
-// breaks with a modded type), so the hook is on its base class.
+// Expansion's own airdrops (missions and supply signals) are left alone.
 
-modded class ExpansionMissionEventBase
+class SC_Order
 {
-	// [NonSerialized()]: Expansion saves missions as JSON files
-	[NonSerialized()]
-	bool m_SC_Active;
-	[NonSerialized()]
-	SC_Drop m_SC_Drop;
-	[NonSerialized()]
-	ref SC_Gun m_SC_Gun;   // ref: a mix of guns is made for the drop, not in the config
-	[NonSerialized()]
-	bool m_SC_Blown;   // set by the crate when the self-destruct went off
-	[NonSerialized()]
-	ref ExpansionAirdropLocation m_SC_SavedLocation;
-	[NonSerialized()]
-	int m_SC_SavedInfectedCount;
+	string m_Who;      // the player's id: one delivery at a time each
+	string m_Name;     // for the log
+	ref SC_Drop m_Drop;
+	ref SC_Gun m_Gun;
+	ExpansionAirdropPlaneBase m_Plane;
+	ShippingCrate_Airdrop m_Crate;
 
-	override void Start()
+	static ref array<ref SC_Order> s_Orders = new array<ref SC_Order>();
+
+	// still coming, or landed and not yet blown (with no self-destruct - the default - done once
+	// it has landed)
+	bool Active()
 	{
-		ExpansionMissionEventAirdrop airdrop;
-		m_SC_Active = false;
-		if (g_Game.IsServer() && Class.CastTo(airdrop, this))
-			SC_Prepare(airdrop);
-
-		super.Start();
-
-		if (m_SC_Active)
-		{
-			if (airdrop.m_Plane)
-			{
-				airdrop.m_Plane.m_SC_Mission = this;
-			}
-			else
-			{
-				SC_Restore(airdrop);
-				m_SC_Active = false;
-			}
-		}
+		if (m_Plane)
+			return true;
+		if (!m_Crate)
+			return false;
+		return !m_Crate.SC_HasLanded() || SC_Settings.Get().selfDestructMinutes > 0;
 	}
 
-	// Expansion's own "airdrop ended" line says "destroyed by infected" whatever happened; for
-	// our drops it's swapped for one that says what did
-	override void End()
+	static SC_Order Of(string who)
 	{
-		ExpansionMissionEventAirdrop airdrop;
-		bool ours = m_SC_Active && Class.CastTo(airdrop, this);
-		bool notify = false;
-		bool shown = false;
-		string where = "";
-		if (ours)
+		foreach (SC_Order o : s_Orders)
 		{
-			shown = airdrop.ShowNotification;
-			notify = shown && GetExpansionSettings().GetNotification().ShowAirdropEnded;
-			where = airdrop.DropLocation.Name;
-			airdrop.ShowNotification = false;
+			if (o.m_Who == who && o.Active())
+				return o;
 		}
-
-		super.End();
-
-		if (ours)
-		{
-			airdrop.ShowNotification = shown;
-			if (notify)
-			{
-				string what = "has been cleared away";
-				if (m_SC_Blown)
-					what = "has self-destructed";
-				CreateNotification(new StringLocaliser("The delivery near " + where + " " + what + "."), EXPANSION_NOTIFICATION_ICON_AIRDROP, 7);
-			}
-			SC_Restore(airdrop);
-		}
-		m_SC_Active = false;
-		m_SC_Blown = false;
+		return null;
 	}
 
-	protected void SC_Prepare(ExpansionMissionEventAirdrop airdrop)
+	static void Tell(PlayerBase player, string text, bool ok = true)
 	{
+		if (!player || !player.GetIdentity())
+			return;
+		int colour = COLOR_EXPANSION_NOTIFICATION_SUCCESS;
+		if (!ok)
+			colour = COLOR_EXPANSION_NOTIFICATION_ORANGE;
+		ExpansionNotification("Delivery", text, EXPANSION_NOTIFICATION_ICON_AIRDROP, colour, 7).Create(player.GetIdentity());
+	}
+
+	// the radio's button: a delivery of what it's tuned to (a random load if "any"), to
+	// where the player is standing
+	static void Place(PlayerBase player, SC_DropRadio radio)
+	{
+		if (!player || !player.GetIdentity() || !player.IsAlive())
+			return;
 		SC_Config cfg = SC_Settings.Get();
 		if (!cfg.enabled)
+		{
+			Tell(player, "Deliveries are switched off on this server.", false);
 			return;
+		}
+		string who = player.GetIdentity().GetId();
+		SC_Order pending = Of(who);
+		if (pending)
+		{
+			Tell(player, "Your " + pending.m_Name + " is still on its way or not yet cleared. One delivery at a time.", false);
+			return;
+		}
 
-		SC_Drop drop = SC_Settings.Pick();
+		vector stood = player.GetPosition();
+		vector water;
+		bool nearWater = SC_Spot.WaterSpot(stood, cfg.searchRadius, water);
+
+		SC_Drop drop = null;
+		string by = "by radio";
+		if (radio)
+			drop = radio.SC_TunedDrop();
 		if (!drop)
 		{
-			Print("[ShippingCrate] no loads configured - a normal Expansion airdrop");
+			drop = SC_Settings.Pick(nearWater);   // a boat only where there's water for it
+			by = "random";
+		}
+		if (!drop)
+		{
+			Tell(player, "There is nothing to deliver.", false);
 			return;
 		}
 
-		vector centre;
-		int size;
-		if (!SC_Spot.Cluster(SC_Spot.PlayerPositions(), cfg.clusterRadius, centre, size))
+		vector spot;
+		if (drop.water)
 		{
-			Print("[ShippingCrate] nobody is online - a normal Expansion airdrop");
-			return;
+			if (!nearWater)
+			{
+				Tell(player, "A " + drop.name + " needs open water within " + cfg.searchRadius + " m of you.", false);
+				return;
+			}
+			spot = water;
 		}
-		vector spot = SC_Spot.FlatGround(centre, cfg.searchRadius, cfg.maxSlope);
+		else
+			spot = SC_Spot.FlatGround(stood, cfg.searchRadius, cfg.maxSlope);
 		string town = SC_Spot.NearestTown(spot);
 
-		// delivery radios in the group pick the vehicle and the guns, each knob on its own
-		array<SC_DropRadio> radios = SC_DropRadio.Carried(SC_Spot.GroupPlayers(centre, cfg.clusterRadius));
-		string vehicleBy = "random";
-		SC_Drop askedDrop = SC_DropRadio.ChooseDrop(radios);
-		if (askedDrop)
+		auto air = GetExpansionSettings().GetAirdrop();
+		ExpansionLootContainer container = new ExpansionLootContainer("ShippingCrate_Airdrop", 2, 1, new array<ref ExpansionLoot>(), new TStringArray(), 0, 0, false, 4.5);
+		ExpansionAirdropPlaneBase plane = ExpansionAirdropPlaneBase.Expansion_CreatePlane(air.AirdropPlaneClassName, Vector(spot[0], 0, spot[2]), town, cfg.dropRadius, air.Height, air.DropZoneHeight, air.Speed, air.DropZoneSpeed, container);
+		if (!plane)
 		{
-			drop = askedDrop;
-			vehicleBy = "by radio";
+			Print("[ShippingCrate] could not send a plane for " + drop.name);
+			Tell(player, "No plane could be sent. Try again later.", false);
+			return;
 		}
-		string gunBy = "nobody chose";
-		SC_Gun gun = SC_DropRadio.ChooseGun(radios);
-		if (gun)
-			gunBy = "by radio";
-		else
-			gun = SC_Settings.MixedGuns();   // "any": the boot full of different guns
-		string gunName = "no guns";
-		if (gun)
-			gunName = gun.name;
 
-		m_SC_SavedLocation = airdrop.DropLocation;
-		m_SC_SavedInfectedCount = airdrop.InfectedCount;
-		airdrop.DropLocation = new ExpansionAirdropLocation(spot[0], spot[2], cfg.dropRadius, town);
-		airdrop.InfectedCount = 0;
-		m_SC_Drop = drop;
-		m_SC_Gun = gun;
-		m_SC_Active = true;
-		Print("[ShippingCrate] " + MissionName + ": " + drop.name + " (" + vehicleBy + ") with " + gunName + " (" + gunBy + ") for a group of " + size + " near " + town + " at " + spot);
-	}
+		SC_Order order = new SC_Order();
+		order.m_Who = who;
+		order.m_Name = drop.name;
+		order.m_Drop = drop;
+		order.m_Plane = plane;
+		plane.m_SC_Order = order;
+		// forget the finished ones
+		for (int i = s_Orders.Count() - 1; i >= 0; i--)
+		{
+			if (!s_Orders[i].Active())
+				s_Orders.Remove(i);
+		}
+		s_Orders.Insert(order);
 
-	// put the mission's own location back, so the next run starts from the file's values
-	protected void SC_Restore(ExpansionMissionEventAirdrop airdrop)
-	{
-		if (m_SC_SavedLocation)
-			airdrop.DropLocation = m_SC_SavedLocation;
-		airdrop.InfectedCount = m_SC_SavedInfectedCount;
-		m_SC_SavedLocation = null;
+		Print("[ShippingCrate] " + player.GetIdentity().GetName() + " ordered " + drop.name + " (" + by + ") to " + spot + " near " + town + " (stood at " + stood + ", " + vector.Distance(stood, spot) + " m away)");
+		Tell(player, drop.name + " ordered. A plane is on its way: stay near " + town + ".");
 	}
 }
 
 modded class ExpansionAirdropPlaneBase
 {
-	ExpansionMissionEventBase m_SC_Mission;
+	SC_Order m_SC_Order;   // server: the delivery this plane carries, if any
 
 	// client: navigation lights on the wingtips, on every airdrop plane
 	protected ScriptedLightBase m_SC_NavLeft;
@@ -168,10 +152,12 @@ modded class ExpansionAirdropPlaneBase
 	protected bool m_SC_NavFollowing;
 	protected float m_SC_NavTime;
 
+	static const bool NAV_LIGHTS = true;   // (2026-11-14: cleared of the helicopter crashes - that was the view distance)
+
 	override void EEInit()
 	{
 		super.EEInit();
-		if (!g_Game.IsDedicatedServer())
+		if (NAV_LIGHTS && !g_Game.IsDedicatedServer())
 			SC_AddNavLights();
 	}
 
@@ -363,41 +349,17 @@ modded class ExpansionAirdropPlaneBase
 	}
 
 #ifdef SERVER
-	// The radios once more, as the crate leaves the plane: the load was chosen when the plane
-	// set off a couple of minutes ago, and the group may have retuned since. A tuned knob wins;
-	// an untuned one keeps what was chosen then.
-	protected void SC_ReadRadios()
-	{
-		SC_Config cfg = SC_Settings.Get();
-		vector below = GetPosition();
-		below[1] = g_Game.SurfaceY(below[0], below[2]);
-		array<SC_DropRadio> radios = SC_DropRadio.Carried(SC_Spot.GroupPlayers(below, cfg.clusterRadius));
-		SC_Drop drop = SC_DropRadio.ChooseDrop(radios);
-		if (drop && drop != m_SC_Mission.m_SC_Drop)
-		{
-			Print("[ShippingCrate] retuned since take-off: " + drop.name + " instead of " + m_SC_Mission.m_SC_Drop.name);
-			m_SC_Mission.m_SC_Drop = drop;
-		}
-		SC_Gun gun = SC_DropRadio.ChooseGun(radios);
-		if (gun && gun != m_SC_Mission.m_SC_Gun)
-		{
-			Print("[ShippingCrate] retuned since take-off: " + gun.name + " guns");
-			m_SC_Mission.m_SC_Gun = gun;
-		}
-	}
-
 	override ExpansionAirdropContainerBase Expansion_CreateDrop(string container)
 	{
-		if (!m_SC_Mission)
+		if (!m_SC_Order)
 			return super.Expansion_CreateDrop(container);
 
 		ExpansionAirdropContainerBase drop = super.Expansion_CreateDrop("ShippingCrate_Airdrop");
 		ShippingCrate_Airdrop crate;
 		if (Class.CastTo(crate, drop))
 		{
-			crate.m_SC_Mission = m_SC_Mission;
-			SC_ReadRadios();
-			crate.SC_Setup(m_SC_Mission.m_SC_Drop, m_SC_Mission.m_SC_Gun);
+			m_SC_Order.m_Crate = crate;
+			crate.SC_Setup(m_SC_Order.m_Drop, m_SC_Order.m_Gun);
 		}
 		return drop;
 	}
@@ -410,6 +372,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	int m_SC_Colour;   // 1-based index into SC_Settings.COLOURS, 0 until the server picks one (container only)
 	int m_SC_Carrier;  // CARRIER_CONTAINER or CARRIER_PALLET
 	int m_SC_Stage;    // the self-destruct: 0 landed (or falling), 1 the bear's warning, 2 blown
+	bool m_SC_Armed;   // the self-destruct is on (selfDestructMinutes > 0): only then the IEDs and the bear
 
 	static const int CARRIER_CONTAINER = 0;
 	static const int CARRIER_PALLET = 1;
@@ -422,7 +385,6 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	static const int RPC_INFO = 0x5C0A02;
 
 	// server
-	ExpansionMissionEventBase m_SC_Mission;
 	ref SC_Drop m_SC_Drop;                             // held, so a load made in script (the test) outlives its maker
 	ref SC_Gun m_SC_Gun;
 	Building m_SC_Box;                                 // the landed container, if that's the carrier
@@ -446,7 +408,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	// vehicle on it) whose bottom is level with the crate's, parachutes over it, a spotlight
 	// underneath, a runway edge light at each end whose lamp is a rotating beacon, and the IEDs
 	// and teddy bear. Once it has landed the beacons and the decoration move onto the real thing
-	// until the mission ends and the crate goes.
+	// until the self-destruct and the crate goes.
 	protected Object m_SC_Local;                                    // falling container
 	protected ref array<Object> m_SC_Tiles = new array<Object>();   // falling pallet deck
 	protected Object m_SC_LocalVehicle;                             // ... and the vehicle on it: its model only
@@ -491,6 +453,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		RegisterNetSyncVariableInt("m_SC_Carrier", 0, 1);
 		RegisterNetSyncVariableInt("m_SC_RideLow");
 		RegisterNetSyncVariableInt("m_SC_RideHigh");
+		RegisterNetSyncVariableBool("m_SC_Armed");
 	}
 
 	// Only unhooks: by the time the destructor runs (e.g. leaving the server) the local objects
@@ -515,7 +478,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		super.EEDelete(parent);
 		if (g_Game.IsDedicatedServer())
 		{
-			// Expansion deletes the crate when the mission ends: the carrier goes too
+			// the crate goes after the self-destruct (or is deleted some other way): the carrier goes too
 #ifdef SERVER
 			SC_CancelTimers();
 #endif
@@ -612,10 +575,14 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			m_SC_Carrier = CARRIER_PALLET;
 		if (m_SC_Carrier == CARRIER_CONTAINER)
 			m_SC_Colour = SC_Settings.PickColour();
+		m_SC_Armed = SC_Settings.Get().selfDestructMinutes > 0;
 		SetSynchDirty();
 		if (m_SC_Carrier == CARRIER_PALLET && m_SC_VehicleType != "")
 			SC_CreateRide();
-		Print("[ShippingCrate] dropping " + m_SC_VehicleType + " (body " + SC_Pallet.Size(m_SC_VehicleType) + ") by " + SC_CarrierName());
+		if (m_SC_VehicleType != "")
+			Print("[ShippingCrate] dropping " + m_SC_VehicleType + " (body " + SC_Pallet.Size(m_SC_VehicleType) + ") by " + SC_CarrierName());
+		else if (drop)
+			Print("[ShippingCrate] dropping " + drop.name + " by " + SC_CarrierName());
 	}
 
 	string SC_CarrierName()
@@ -631,7 +598,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		SetSynchDirty();
 	}
 
-	// no loot in the crate, no infected around it, whatever the mission or container settings say;
+	// no loot in the crate, no infected around it, whatever Expansion's container settings say;
 	// falling fallSpeedScale times as fast as Expansion would have it
 	override void Expansion_InitAirdrop(array<ref ExpansionLoot> Loot, TStringArray infected, int ItemCount, int infectedCount, float fallSpeed = 4.5, float windImpact = 0.0)
 	{
@@ -738,12 +705,10 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		m_SC_Delivered = true;
 
 		SC_Drop drop = m_SC_Drop;
-		if (!drop && m_SC_Mission)
-			drop = m_SC_Mission.m_SC_Drop;
 		if (!drop)
 		{
-			drop = SC_Settings.Pick();
-			SC_Setup(drop, SC_Settings.MixedGuns());
+			drop = SC_Settings.Pick(false);   // made without an order (the test): never a boat on land
+			SC_Setup(drop);
 		}
 
 		vector pos = GetPosition();
@@ -777,6 +742,8 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			m_SC_Min = deck[0];
 			m_SC_Max = deck[1];
 			m_SC_Max[1] = deck[1][1] + SC_Pallet.Size(m_SC_VehicleType)[1] + 0.5;
+			if (drop.water)   // the pallet is on the bottom: up to a boat floating over it
+				m_SC_Max[1] = m_SC_Max[1] + Math.Max(SC_Spot.WaterY(pos[0], pos[2]) - g_Game.SurfaceY(pos[0], pos[2]), 0);
 			m_SC_BlastY = deck[1][1] + 0.8;
 		}
 		else
@@ -807,12 +774,15 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 		Print("[ShippingCrate] " + SC_CarrierName() + " landed at " + pos + " with " + dropName + " (" + loaded + " things)");
 
 		SC_Config cfg = SC_Settings.Get();
-		if (m_SC_Parts.Count() > 0 && cfg.selfDestructMinutes > 0)
+		if (m_SC_Parts.Count() > 0)
 		{
-			int warnAt = cfg.selfDestructMinutes * 60000;
-			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Warn, warnAt, false);
-			g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Detonate, warnAt + cfg.warningSeconds * 1000, false);
-			// in case the server stops before then (SC_Leftovers.c)
+			if (cfg.selfDestructMinutes > 0)
+			{
+				int warnAt = cfg.selfDestructMinutes * 60000;
+				g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Warn, warnAt, false);
+				g_Game.GetCallQueue(CALL_CATEGORY_SYSTEM).CallLater(SC_Detonate, warnAt + cfg.warningSeconds * 1000, false);
+			}
+			// cleared after the next restart if it's still here then (SC_Leftovers.c)
 			vector lf[4];
 			lf[0] = m_SC_Frame[0];
 			lf[1] = m_SC_Frame[1];
@@ -869,13 +839,11 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	}
 
 	// C4 goes off (the middle and either side of it, along the carrier), then the carrier and
-	// everything on or in it are removed: this ends the Expansion mission and frees what it held
+	// everything on or in it are removed: and the crate goes
 	void SC_Detonate()
 	{
 		m_SC_Stage = 2;
 		SetSynchDirty();
-		if (m_SC_Mission)
-			m_SC_Mission.m_SC_Blown = true;
 		if (m_SC_Parts.Count() == 0)
 		{
 			g_Game.ObjectDelete(this);
@@ -951,7 +919,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			SC_Leftovers.Forget(lf[3]);
 		}
 		Print("[ShippingCrate] " + SC_CarrierName() + " at " + SC_Centre() + " removed with " + removed + " things on or in it");
-		g_Game.ObjectDelete(this);   // EEDelete takes the carrier; the mission ends
+		g_Game.ObjectDelete(this);   // EEDelete takes the carrier; the order is done
 	}
 #endif
 
@@ -1063,7 +1031,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 			SC_Pallet.Layout(m_SC_VehicleType, nx, nz, deck);
 
 		// landed: the server has put the real carrier down and parked the crate underground
-		// until the mission ends. The stand-ins go; beacons and decoration move onto the real one.
+		// until the self-destruct. The stand-ins go; beacons and decoration move onto the real one.
 		vector at = GetPosition();
 		if (m_Expansion_HasDiscardedParachute && at[1] < g_Game.SurfaceY(at[0], at[2]) - 1)
 		{
@@ -1263,7 +1231,7 @@ class ShippingCrate_Airdrop: ExpansionAirdropContainerBase_Server
 	// bear's eyes glow red and it calls out "Evacuate!" every 3 s.
 	protected void SC_UpdateDecor(vector f[4], vector mm[2], bool pallet)
 	{
-		if (m_SC_Stage >= 2)
+		if (m_SC_Stage >= 2 || !m_SC_Armed)
 		{
 			SC_DeleteDecor();
 			return;

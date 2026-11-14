@@ -24,51 +24,46 @@ def parts(name):
     return [i for g in presets(name) for i in g]
 
 # ---- vehicles -------------------------------------------------------------------------
-# name, colour variants, extra boot contents, items on the floor / deck
-LOOSE = [{"type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"}]
-# the sea chest: every vanilla explosive that isn't ammunition, and detonators to set off the
-# C4 and IEDs
-EXPLOSIVES = [("RemoteDetonator", 2), ("Plastic_Explosive", 3), ("ImprovisedExplosive", 2), ("ClaymoreMine", 2),
-              ("LandMineTrap", 2), ("M67Grenade", 3), ("RGD5Grenade", 3), ("FlashGrenade", 2), ("Grenade_ChemGas", 1),
-              ("M18SmokeGrenade_Green", 1), ("M18SmokeGrenade_Purple", 1)]   # the chest is full: two smokes, not every colour
-SEA_CHEST = {"type": "SeaChest", "cargo": [dict(type=t, **({"count": n} if n > 1 else {})) for t, n in EXPLOSIVES]}
-TRUCK_LOOSE = LOOSE + [SEA_CHEST, {"type": "Barrel_Blue|Barrel_Green|Barrel_Red|Barrel_Yellow"}]
-BOOT = [{"type": "GlassBottle", "liquid": "Gasoline", "quantity": 1}, {"type": "PetrolLighter"}, {"type": "Rope"}]
+# name, colour variants (vehicles come alone: no extra cargo in them or beside them)
 VEHICLES = [
-    ("Ada 4x4", ["OffroadHatchback", "OffroadHatchback_Blue", "OffroadHatchback_White"], BOOT, LOOSE),
-    ("Olga 24", ["CivilianSedan", "CivilianSedan_Black", "CivilianSedan_Wine"], BOOT, LOOSE),
-    ("Gunter 2", ["Hatchback_02", "Hatchback_02_Black", "Hatchback_02_Blue"], BOOT, LOOSE),
-    ("Sarka 120", ["Sedan_02", "Sedan_02_Grey", "Sedan_02_Red"], BOOT, LOOSE),
-    ("M1025", ["Offroad_02", "Offroad_02_Beige"], BOOT, LOOSE),
-    ("M3S Covered", ["Truck_01_Covered", "Truck_01_Covered_Blue", "Truck_01_Covered_Orange"], [], TRUCK_LOOSE),
-    # no boot: the gun kit lies on the floor beside the bike
-    ("Motorbike", ["Motorbike_01_Blue", "Motorbike_01_Red", "Motorbike_01_Yellow"], [], LOOSE),
-    ("Sport bike", ["Motorbike_02_Red"], [], LOOSE),
+    ("Ada 4x4", ["OffroadHatchback", "OffroadHatchback_Blue", "OffroadHatchback_White"]),
+    ("Olga 24", ["CivilianSedan", "CivilianSedan_Black", "CivilianSedan_Wine"]),
+    ("Gunter 2", ["Hatchback_02", "Hatchback_02_Black", "Hatchback_02_Blue"]),
+    ("Sarka 120", ["Sedan_02", "Sedan_02_Grey", "Sedan_02_Red"]),
+    ("M1025", ["Offroad_02", "Offroad_02_Beige"]),
+    ("M3S Covered", ["Truck_01_Covered", "Truck_01_Covered_Blue", "Truck_01_Covered_Orange"]),
+    ("Motorbike", ["Motorbike_01_Blue", "Motorbike_01_Red", "Motorbike_01_Yellow"]),
+    ("Sport bike", ["Motorbike_02_Red"]),
 ]
 
 # Expansion Vehicles' (and Expansion Licensed's): no cfgspawnabletypes entries, so they're
 # fitted by their own debug-spawn routine ("fit"), which also gives each skin its matching
 # doors. A server without the mod skips these loads (SC_Settings drops a vehicle it hasn't
-# got). Boats are left out: a boat delivered inland is no use.
+# got). Boats are dropped on water near the player ("water").
 EXPANSION = [
     ("Land Rover", ["Expansion_Landrover", "Expansion_Landrover_Green", "Expansion_Landrover_Red", "Expansion_Landrover_Grey",
-                    "Expansion_Landrover_Blue", "Expansion_Landrover_Orange"], BOOT, LOOSE),
-    ("UAZ", ["ExpansionUAZ", "ExpansionUAZ_Green", "ExpansionUAZ_Black", "ExpansionUAZ_LightGreen"], BOOT, LOOSE),
-    ("UAZ Cargo", ["ExpansionUAZCargo", "ExpansionUAZCargo_Green", "ExpansionUAZCargo_Black", "ExpansionUAZCargo_LightGreen"], BOOT, LOOSE),
+                    "Expansion_Landrover_Blue", "Expansion_Landrover_Orange"]),
+    ("UAZ", ["ExpansionUAZ", "ExpansionUAZ_Green", "ExpansionUAZ_Black", "ExpansionUAZ_LightGreen"]),
+    ("UAZ Cargo", ["ExpansionUAZCargo", "ExpansionUAZCargo_Green", "ExpansionUAZCargo_Black", "ExpansionUAZCargo_LightGreen"]),
     ("UAZ Roofless", ["ExpansionUAZRoofless", "ExpansionUAZRoofless_Green", "ExpansionUAZRoofless_Black",
-                      "ExpansionUAZRoofless_LightGreen"], BOOT, LOOSE),
-    ("Vodnik", ["ExpansionVodnik", "ExpansionVodnik_Camo", "ExpansionVodnik_CamoMedical"], BOOT, TRUCK_LOOSE),
-    ("Bus", ["ExpansionBus", "ExpansionBus_Blue", "ExpansionBus_Red", "ExpansionBus_Weeb"], BOOT, TRUCK_LOOSE),
-    ("Tractor", ["ExpansionTractor", "ExpansionTractor_Red", "ExpansionTractor_Blue", "ExpansionTractor_Green"], [], LOOSE),
-    ("Gyrocopter", ["ExpansionGyrocopter"], [], LOOSE),
+                      "ExpansionUAZRoofless_LightGreen"]),
+    ("Vodnik", ["ExpansionVodnik", "ExpansionVodnik_Camo", "ExpansionVodnik_CamoMedical"]),
+    ("Bus", ["ExpansionBus", "ExpansionBus_Blue", "ExpansionBus_Red", "ExpansionBus_Weeb"]),
+    # these two fit the container, but belong on a pallet
+    ("Tractor", ["ExpansionTractor", "ExpansionTractor_Red", "ExpansionTractor_Blue", "ExpansionTractor_Green"], "pallet"),
+    ("Gyrocopter", ["ExpansionGyrocopter"], "pallet"),   # fits the container too, but flies off a pallet
     ("MH-6", ["ExpansionMh6", "ExpansionMh6_Green", "ExpansionMh6_Black", "ExpansionMh6_Blueline", "ExpansionMh6_Digital",
               "ExpansionMh6_Elliptical", "ExpansionMh6_Furious", "ExpansionMh6_GrayWatcher", "ExpansionMh6_Jeans",
               "ExpansionMh6_Resistance", "ExpansionMh6_Shadow", "ExpansionMh6_Sheriff", "ExpansionMh6_Speedy",
-              "ExpansionMh6_Sunset", "ExpansionMh6_Vrana", "ExpansionMh6_Wasp", "ExpansionMh6_Wave"], BOOT, LOOSE),
+              "ExpansionMh6_Sunset", "ExpansionMh6_Vrana", "ExpansionMh6_Wasp", "ExpansionMh6_Wave"]),
     ("UH-1H", ["ExpansionUh1h", "ExpansionUh1h_Green", "ExpansionUh1h_Civilian", "ExpansionUh1h_Medical",
-               "ExpansionUh1h_Uber", "ExpansionUh1h_Resistance"], BOOT, LOOSE),
+               "ExpansionUh1h_Uber", "ExpansionUh1h_Resistance"]),
     ("Merlin", ["ExpansionMerlin", "ExpansionMerlin_Green", "ExpansionMerlin_Dahoman", "ExpansionMerlin_Ion",
-                "ExpansionMerlin_President", "ExpansionMerlin_Vrana", "ExpansionMerlin_Wave"], BOOT, TRUCK_LOOSE),
+                "ExpansionMerlin_President", "ExpansionMerlin_Vrana", "ExpansionMerlin_Wave"]),
+    # boats: dropped on water near the player, on a pallet that sinks; nothing else comes with them
+    ("Zodiac", ["ExpansionZodiacBoat", "ExpansionZodiacBoat_Orange", "ExpansionZodiacBoat_Green",
+                "ExpansionZodiacBoat_Black"], "pallet", "water"),
+    ("Utility Boat", ["ExpansionUtilityBoat", "ExpansionUtilityBoat_Black", "ExpansionUtilityBoat_Green"], "pallet", "water"),
 ]
 
 def counted(types):
@@ -81,16 +76,19 @@ def counted(types):
     return out
 
 drops = []
-for name, variants, boot, loose in VEHICLES:
+for name, variants in VEHICLES:
     p = parts(variants[0])
     if not p:
         sys.exit("no parts for " + variants[0])
-    vehicle = {"type": "|".join(variants), "fluids": True, "attachments": counted(p), "cargo": boot}
-    drops.append({"name": name, "weight": 1, "carrier": "", "vehicle": vehicle, "items": loose})
-for name, variants, boot, loose in EXPANSION:
-    vehicle = {"type": "|".join(variants), "fluids": True, "fit": True, "attachments": [], "cargo": boot}
+    vehicle = {"type": "|".join(variants), "fluids": True, "attachments": counted(p), "cargo": []}
+    drops.append({"name": name, "weight": 1, "carrier": "", "vehicle": vehicle, "items": []})
+for name, variants, *rest in EXPANSION:
+    vehicle = {"type": "|".join(variants), "fluids": True, "fit": True, "attachments": [], "cargo": []}
     # Expansion Licensed has some of these without Expansion Vehicles, but not the scripts that fit them out
-    drops.append({"name": name, "weight": 1, "carrier": "", "needs": "DayZExpansion_Vehicles_Scripts", "vehicle": vehicle, "items": loose})
+    drop = {"name": name, "weight": 1, "carrier": rest[0] if rest else "", "needs": "DayZExpansion_Vehicles_Scripts", "vehicle": vehicle, "items": []}
+    if "water" in rest:
+        drop["water"] = True
+    drops.append(drop)
 
 # ---- guns ---------------------------------------------------------------------------------
 guns = {}
@@ -199,9 +197,59 @@ for k in kits:
         k["weight"] = 0.3
 kits.sort(key=lambda k: WANT.index(k["cargo"][0]["type"].split("|")[0]))
 
+# ---- equipment: no vehicle, a container of supplies ------------------------------------------
+def barrel(colour, contents):
+    return {"type": "Barrel_" + colour, "cargo": [dict(type=t, **({"count": n} if n > 1 else {}), **extra)
+                                                  for t, n, extra in contents]}
+GUN_BARREL_SKIP = {"R12", "M79"}   # a barrel holds the five rifles with their magazines, no more
+def gun_barrel():
+    # one of every rifle kit's gun, loaded, with two spare magazines
+    out = []
+    for k in kits:
+        if k["cargo"][0]["type"].split("|")[0] in GUN_BARREL_SKIP:
+            continue
+        gun = dict(k["cargo"][0]); gun.pop("count", None)
+        out.append((gun.pop("type"), 1, gun))
+        for c in k["cargo"][1:2]:
+            out.append((c["type"], 2 if c["type"].startswith("Mag_") else min(c.get("count", 1), 12), {}))
+    return out
+EQUIPMENT = {"name": "Equipment", "weight": 1, "carrier": "container", "items": [
+    {"type": "HandCart_HandTruck_Blue|HandCart_HandTruck_Red|HandCart_HandTruck_Yellow"},
+    barrel("Green", gun_barrel()),
+    barrel("Red", [("BandageDressing", 4, {}), ("SalineBagIV", 2, {}), ("Morphine", 2, {}), ("Epinephrine", 2, {}),
+                   ("VitaminBottle", 1, {}), ("TetracyclineAntibiotics", 1, {}), ("CharcoalTablets", 1, {}),
+                   ("PainkillerTablets", 1, {}), ("BakedBeansCan", 3, {}), ("TacticalBaconCan", 3, {}),
+                   ("SardinesCan", 2, {}), ("PeachesCan", 2, {}), ("WaterBottle", 2, {"liquid": "Water", "quantity": 1}),
+                   ("CanOpener", 1, {})]),
+    barrel("Blue", [("GorkaEJacket_Summer", 1, {}), ("GorkaPants_Summer", 1, {}), ("MilitaryBoots_Black", 1, {}),
+                    ("TacticalGloves_Black", 1, {}), ("BallisticHelmet_Black", 1, {}), ("PlateCarrierVest", 1, {}),
+                    ("MilitaryBelt", 1, {}), ("Balaclava3Holes_Black", 1, {}), ("AviatorGlasses", 1, {})]),
+    barrel("Blue", [("AliceBag_Green", 1, {}), ("SmershVest", 1, {}), ("M65Jacket_Black", 1, {}), ("CargoPants_Black", 1, {}),
+                    ("CombatBoots_Black", 1, {}), ("WorkingGloves_Black", 1, {}), ("BaseballCap_Black", 1, {}),
+                    ("ChestHolster", 1, {}), ("HuntingJacket_Autumn", 1, {}), ("HunterPants_Autumn", 1, {})]),
+    barrel("Yellow", [("Hammer", 1, {}), ("Hatchet", 1, {}), ("Shovel", 1, {}), ("Pliers", 1, {}), ("Hacksaw", 1, {}),
+                      ("NailBox", 3, {}), ("MetalWire", 2, {}), ("BarbedWire", 1, {}), ("CombinationLock4", 1, {}),
+                      ("FenceKit", 2, {}), ("WatchtowerKit", 1, {}), ("TerritoryFlagKit", 1, {}), ("Rope", 1, {})]),
+    barrel("Green", [("NVGoggles", 1, {"attachments": [{"type": "Battery9V"}]}),
+                     ("Headtorch_Black", 1, {"attachments": [{"type": "Battery9V"}]}), ("Battery9V", 4, {}),
+                     ("Binoculars", 1, {}), ("Lockpick", 1, {}), ("Screwdriver", 1, {}), ("SewingKit", 1, {}),
+                     ("LeatherSewingKit", 1, {}), ("WeaponCleaningKit", 1, {}), ("ElectronicRepairKit", 1, {}),
+                     ("TireRepairKit", 1, {}), ("EpoxyPutty", 1, {})]),
+    # thrown and deployable explosives, with detonators for the C4 and the IEDs
+    barrel("Red", [("RemoteDetonator", 2, {}), ("Plastic_Explosive", 3, {}), ("ImprovisedExplosive", 2, {}),
+                   ("ClaymoreMine", 2, {}), ("LandMineTrap", 2, {}), ("M67Grenade", 3, {}), ("RGD5Grenade", 3, {}),
+                   ("FlashGrenade", 2, {}), ("Grenade_ChemGas", 1, {}), ("M18SmokeGrenade_Green", 1, {}),
+                   ("M18SmokeGrenade_Red", 1, {}), ("RDG2SmokeGrenade_Black", 1, {})]),
+    # loose on the floor: a belt in cargo can't take attachments (vanilla MilitaryBelt)
+    {"type": "MilitaryBelt", "attachments": [{"type": "Canteen", "liquid": "Water", "quantity": 1},
+                                             {"type": "NylonKnifeSheath", "attachments": [{"type": "CombatKnife"}]},
+                                             {"type": "PlateCarrierHolster"}]},
+]}
+drops.insert(0, EQUIPMENT)
+
 old["drops"] = drops
 old["guns"] = kits
 json.dump(old, open(json_path, "w"), indent=4, ensure_ascii=False)
 open(json_path, "a").write("\n")
-print(len(drops), "vehicles:", ", ".join(d["name"] for d in drops))
+print(len(drops), "loads:", ", ".join(d["name"] for d in drops))
 print(len(kits), "gun kits:", ", ".join(k["name"] for k in kits))

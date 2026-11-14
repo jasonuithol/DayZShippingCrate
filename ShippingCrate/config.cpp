@@ -39,15 +39,15 @@ class CfgVehicles
 	class HouseNoDestruct;
 	class Inventory_Base;
 
-	// The delivery radio: vanilla's walkie-talkie, bright orange, and not a radio. In hand it
-	// tunes to one of the loads in ShippingCrate.json; a drop on a group that has one brings
-	// what it's tuned to. Every new character starts with one. The model has no hidden
+	// The delivery radio: vanilla's walkie-talkie, bright orange, and not a radio. In hand a click
+	// tunes it to one of the loads in ShippingCrate.json, and holding it orders that load
+	// dropped where you stand. Every new character starts with one. The model has no hidden
 	// selections to retexture, so this is a copy of it whose colour texture is solid orange.
 	class SC_DropRadio: Inventory_Base
 	{
 		scope = 2;
 		displayName = "Delivery radio";
-		descriptionShort = "Bright orange and no good for talking. Tune it to the delivery you want: the next airdrop on your group brings it.";
+		descriptionShort = "Bright orange and no good for talking. Click to pick the vehicle, hold to order it dropped where you stand.";
 		model = "\ShippingCrate\data\sc_radio.p3d";   // vanilla's WalkieTalkie.p3d, its texture solid orange (tools/make_radio.py)
 		weight = 250;
 		itemSize[] = {1, 3};

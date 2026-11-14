@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.5 - 2026-11-14
+
+- Deliveries are ordered on the delivery radio, and nothing else starts them: hold it
+  ("Order drop here") and one of Expansion's airdrop planes heads for flat, clear ground where
+  you stood, bringing the vehicle the knob is on. One delivery at a time per player, until the
+  last one has blown up. Expansion's own airdrops (missions and supply signals) are no longer
+  touched at all. `clusterRadius` is gone, and `searchRadius` is now 50 m.
+- The delivery radio has one knob, for the vehicle: click for the next. "any" (a random vehicle)
+  is a stop on the dial, between the last and the first. The guns knob is gone.
+- The Tractor and the Gyrocopter come down on pallets.
+- Vehicles come alone: no guns in the boot, no petrol, lighter or rope, no hand truck, sea
+  chest or barrel beside them.
+- New load, Equipment (first on the radio): a container with a hand truck, a barrel of guns
+  (the five rifles, loaded, two spare magazines each), a barrel of medical supplies and food, two
+  barrels of clothing and gear, a barrel of base-building tools and kits, a barrel of field gear
+  (night-vision goggles, head torch, binoculars, lockpick, screwdriver, batteries, every repair
+  kit), a belt with a canteen, a sheathed knife and a holster, a barrel of explosives (C4,
+  IEDs and detonators, claymores, land mines, grenades, smoke).
+- Boats: the Zodiac and the Utility Boat (with DayZ Expansion Vehicles). Ordered within 50 m
+  (`searchRadius`) of open water, they come down on a pallet onto the water nearest the player:
+  the pallet sinks to the bottom and the boat floats, fitted out and fuelled, with nothing else.
+  No water nearby: the order is refused with a message. On "any", a boat only comes up where
+  there's water for it. New load field `"water": true`.
+- No self-destruct by default (`selfDestructMinutes` -1, also when left out): with deliveries on
+  demand, drops stay until the next restart and are cleared then, and the next order can go as
+  soon as the last one has landed. The bear, the IEDs and the blast only appear when
+  `selfDestructMinutes` is set.
+
 ## 0.4 - 2026-11-13
 
 - The Expansion vehicles are on the delivery radio, on servers running DayZ Expansion Vehicles:

@@ -11,4 +11,7 @@
 2792984722 @DayZ-Expansion-Navigation
 local @HandCart
 local @BetterExplosions
+local @BetterExplosions_Expansion
+# caps view distance while flying (10 km views froze/crashed the client up high)
+local @FlyingWithoutCTD
 local @ShippingCrate

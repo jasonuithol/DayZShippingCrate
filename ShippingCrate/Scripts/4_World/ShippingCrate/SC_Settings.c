@@ -28,11 +28,12 @@ class SC_Drop
 	ref SC_Item vehicle;         // optional
 	string carrier;              // "container", "pallet", or left out: whichever the vehicle fits
 	string needs;                // optional: a CfgPatches class (a mod) the load needs; left out on a server without it
+	bool water;                  // a boat: dropped on water within searchRadius of the player, its pallet sinking; no guns
 	ref array<ref SC_Item> items = new array<ref SC_Item>();
 }
 
-// A gun kit: what goes in the vehicle's boot (or on the floor if the load has no vehicle). Picked
-// separately from the vehicle: the delivery radio has a knob for each.
+// A gun kit: what goes in the vehicle's boot (or on the floor if the load has no vehicle). Every
+// delivery brings a mix of them (MixedGuns).
 class SC_Gun
 {
 	string name;
@@ -45,12 +46,11 @@ class SC_Gun
 class SC_Config
 {
 	bool enabled = true;
-	float clusterRadius = 1000;  // players this close to each other count as one group
 	float dropRadius = 1;        // Expansion's random spread around the drop spot (wind drift grows with it)
-	float searchRadius = 200;    // how far from the group's centre to look for flat, clear ground
+	float searchRadius = 50;     // how far from where the order was made to look for flat, clear ground
 	float maxSlope = 8;          // degrees
 	bool openDoors = false;      // the doors are always unlocked; this opens them too
-	int selfDestructMinutes = 10; // after landing: then the bear warns, then it all blows up and is removed; -1 = never
+	int selfDestructMinutes = -1; // after landing: then the bear warns, then it all blows up and is removed; -1 (or left out) = never
 	int warningSeconds = 60;     // how long the bear warns before it blows
 	float fallSpeedScale = 1;    // the parachute's fall speed, times Expansion's
 	ref array<string> colours = {"Blue", "Yellow", "Orange", "Red"};
@@ -103,7 +103,7 @@ class SC_Settings
 			SC_Config loaded;
 			if (!JsonFileLoader<SC_Config>.LoadFile(FILE, loaded, error))
 			{
-				Print("[ShippingCrate] " + FILE + ": " + error + " - airdrops stay vanilla Expansion");
+				Print("[ShippingCrate] " + FILE + ": " + error + " - deliveries are switched off");
 				s_Config = new SC_Config();
 				s_Config.enabled = false;
 				return;
@@ -125,16 +125,14 @@ class SC_Settings
 
 	protected static void Sanitise(SC_Config c)
 	{
-		if (c.clusterRadius <= 0)
-			c.clusterRadius = 1000;
 		if (c.searchRadius < 0)
-			c.searchRadius = 200;
+			c.searchRadius = 50;
 		if (c.maxSlope <= 0)
 			c.maxSlope = 8;
 		if (c.dropRadius < 0)
 			c.dropRadius = 0;
 		if (c.selfDestructMinutes == 0)
-			c.selfDestructMinutes = 10;
+			c.selfDestructMinutes = -1;   // left out: no self-destruct (deliveries are on demand now)
 		if (c.warningSeconds <= 0)
 			c.warningSeconds = 60;
 		if (c.fallSpeedScale <= 0)
@@ -220,12 +218,18 @@ class SC_Settings
 	}
 
 	// weighted random choice of load
-	static SC_Drop Pick()
+	// weighted random load; boats only if allowWater (there's water to drop them on)
+	static SC_Drop Pick(bool allowWater = true)
 	{
-		array<ref SC_Drop> drops = Get().drops;
+		array<SC_Drop> drops = new array<SC_Drop>();
 		float total = 0;
-		foreach (SC_Drop d : drops)
+		foreach (SC_Drop d : Get().drops)
+		{
+			if (d.water && !allowWater)
+				continue;
+			drops.Insert(d);
 			total += d.weight;
+		}
 		if (total <= 0)
 			return null;
 
@@ -258,7 +262,7 @@ class SC_Settings
 		return guns[guns.Count() - 1];
 	}
 
-	// The guns knob on "any": one of every kit's gun (loaded) with a quarter of its spare
+	// Every delivery's guns: one of every kit's gun (loaded) with a quarter of its spare
 	// ammunition, in random order, the round repeated MIXED_ROUNDS times so it fills the boot
 	// (what doesn't fit is left out). Without a boot only the first round goes on the floor.
 	static const int MIXED_ROUNDS = 4;

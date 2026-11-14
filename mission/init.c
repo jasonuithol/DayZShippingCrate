@@ -1,14 +1,13 @@
 // Shipping Crate test mission: vanilla Chernarus with Expansion Missions and Shipping Crate.
-// Played normally, Expansion's airdrops land as shipping containers on the players. To save
-// waiting, an airdrop starts as soon as the first player logs in and then every
-// TEST_INTERVAL_MS, each one a different airdrop mission (Expansion's one-at-a-time limit is
-// lifted for the moment it starts), with the plane at TEST_PLANE_SPEED instead of 25 m/s: it comes in from the
-// map edge, ~16 km away. Earlier containers stay until Expansion ends their missions (20 min,
-// and nobody within 1100 m).
+// Played normally: hold the delivery radio to order a drop where you stand. To save waiting,
+// Expansion's airdrop planes (deliveries and supply signals) fly at TEST_PLANE_SPEED instead of
+// 25 m/s: about 2 minutes in from the map edge, ~16 km away. Expansion's own airdrop missions
+// keep their usual schedule; create $profile:sc_drop_now to start one now (it should be a plain
+// Expansion airdrop: Shipping Crate leaves them alone).
 //
 // Started with -missiontest (tools/test.sh shippingcrate) it runs headless checks instead and
-// logs [SCTest] lines: every class name in the config is real, the grouping finds the right
-// centre, and a real crate dropped from 60 m turns into a loaded container when it lands. Then
+// logs [SCTest] lines: every class name in the config is real, the radio's knob steps
+// right, and a real crate dropped from 60 m turns into a loaded container when it lands. Then
 // it shuts the server down.
 void main()
 {
@@ -35,7 +34,6 @@ class CustomMission: MissionServer
 
 	static const float TEST_PLANE_SPEED = 150;      // m/s: about 2 minutes in from the map edge
 	static const float TEST_DROPZONE_SPEED = 60;    // m/s over the drop zone
-	static const int TEST_INTERVAL_MS = 600000;     // 10 minutes
 	// Expansion's default Chernarus airdrop missions (the ones without spaces in their names)
 	static ref array<string> TEST_MISSIONS = {"Random_Balota", "Random_Berezino", "Random_Chernogorsk", "Random_Elektrozavodsk", "Random_Myshkino", "Random_NEAF", "Random_Novodmitrovsk", "Random_NWAF", "Random_Sosnovka", "Random_Zelenogorsk"};
 	bool m_TestDropsStarted;
@@ -46,15 +44,139 @@ class CustomMission: MissionServer
 		if (m_TestDropsStarted)
 			return;
 		m_TestDropsStarted = true;
-		// a few seconds, so the player is in the world when the group is worked out
-		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(StartTestAirdrop, 5000, false);
-		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(StartTestAirdrop, TEST_INTERVAL_MS, true);
+		ExpansionAirdropSettings air = GetExpansionSettings().GetAirdrop();
+		air.Speed = TEST_PLANE_SPEED;
+		air.DropZoneSpeed = TEST_DROPZONE_SPEED;
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckDropNow, 2000, true);
+		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(RecordFlights, 1000, true);
 	}
 
-	// an extra drop on request: create $profile:sc_drop_now and one starts within 2 s
+	// Flight recorder: once a second, every player in a vehicle: where, how high above the
+	// ground, how fast (and climbing), and its attitude (yaw/pitch/roll, degrees). After a
+	// client freezes, the last [SCFlight] lines show what the vehicle was doing.
+	void RecordFlights()
+	{
+		array<Man> men = new array<Man>();
+		GetGame().GetPlayers(men);
+		foreach (Man man : men)
+		{
+			Transport t = Transport.Cast(man.GetParent());
+			if (!t)
+				continue;
+			vector p = t.GetPosition();
+			float agl = p[1] - GetGame().SurfaceY(p[0], p[2]);
+			vector vel = GetVelocity(t);
+			vector ori = t.GetOrientation();
+			vector av = dBodyGetAngularVelocity(t);
+			Print(string.Format("[SCFlight] %1 at %2 alt %3 m (%4 above ground) speed %5 m/s climb %6 ypr %7 spin %8", t.GetType(), p, p[1], agl, vel.Length(), vel[1], ori, av));
+		}
+	}
+
+	// a vehicle beside the first player, made the way Expansion's admin tools make one (no drop
+	// involved): create $profile:sc_spawn holding its class name, e.g. ExpansionUh1h
+	static const float SPAWN_CLEAR_RADIUS = 50;
+
+	void CheckSpawn()
+	{
+		if (!FileExist("$profile:sc_spawn"))
+			return;
+		array<Man> men = new array<Man>();
+		GetGame().GetPlayers(men);
+		if (men.Count() == 0)
+			return;
+		string type = "ExpansionUh1h";
+		FileHandle fh = OpenFile("$profile:sc_spawn", FileMode.READ);
+		if (fh)
+		{
+			string line;
+			if (FGets(fh, line) > 0)
+			{
+				line.Trim();
+				if (line != "")
+					type = line;
+			}
+			CloseFile(fh);
+		}
+		DeleteFile("$profile:sc_spawn");
+		Man man = men[0];
+		vector p = man.GetPosition() + man.GetDirection() * 15;
+		p[1] = GetGame().SurfaceY(p[0], p[2]) + 0.5;
+
+		// earlier test vehicles of this type left around the spot (they're saved, so they come
+		// back after a restart): gone first, unless someone is in one
+		array<Object> near = new array<Object>();
+		array<CargoBase> proxies = new array<CargoBase>();
+		GetGame().GetObjectsAtPosition(p, SPAWN_CLEAR_RADIUS, near, proxies);
+		int cleared = 0;
+		foreach (Object o : near)
+		{
+			Transport old = Transport.Cast(o);
+			if (!old || old.GetType() != type)
+				continue;
+			bool crewed = false;
+			for (int seat = 0; seat < old.CrewSize(); seat++)
+			{
+				if (old.CrewMember(seat))
+					crewed = true;
+			}
+			if (crewed)
+				continue;
+			GetGame().ObjectDelete(old);
+			cleared++;
+		}
+		if (cleared > 0)
+			Print("[SCTest] removed " + cleared + " old " + type + " near the spawn spot");
+		EntityAI v = EntityAI.Cast(GetGame().CreateObjectEx(type, p, ECE_PLACE_ON_SURFACE | ECE_CREATEPHYSICS));
+		if (!v)
+		{
+			Print("[SCTest] could not spawn " + type);
+			return;
+		}
+		v.OnDebugSpawn();
+		v.SetLifetimeMax(3888000);
+		v.SetLifetime(3888000);
+		Print("[SCTest] spawned " + type + " at " + p + " beside " + man.GetIdentity().GetName());
+	}
+
+	// everyone onto dry land on request: create $profile:sc_tp, optionally holding "x z"
+	// (default: the fields north of Elektrozavodsk)
+	void CheckTeleport()
+	{
+		if (!FileExist("$profile:sc_tp"))
+			return;
+		vector to = "10790 0 2365";
+		FileHandle fh = OpenFile("$profile:sc_tp", FileMode.READ);
+		if (fh)
+		{
+			string line;
+			if (FGets(fh, line) > 0)
+			{
+				TStringArray parts = new TStringArray();
+				line.Split(" ", parts);
+				if (parts.Count() >= 2)
+					to = Vector(parts[0].ToFloat(), 0, parts[1].ToFloat());
+			}
+			CloseFile(fh);
+		}
+		array<Man> men = new array<Man>();
+		GetGame().GetPlayers(men);
+		if (men.Count() == 0)
+			return;   // keep the file until someone is in
+		DeleteFile("$profile:sc_tp");
+		foreach (Man man : men)
+		{
+			vector p = to;
+			p[1] = GetGame().SurfaceY(p[0], p[2]) + 0.3;
+			man.SetPosition(p);
+			Print("[SCTest] moved " + man.GetIdentity().GetName() + " to " + p);
+		}
+	}
+
+	// an Expansion airdrop mission on request: create $profile:sc_drop_now and one starts within 2 s
 	void CheckDropNow()
 	{
+		CheckTeleport();
+		CheckSpawn();
 		if (!FileExist("$profile:sc_drop_now"))
 			return;
 		DeleteFile("$profile:sc_drop_now");
@@ -77,8 +199,7 @@ class CustomMission: MissionServer
 		int maxMissions = missionSettings.MaxMissions;
 		missionSettings.MaxMissions = module.GetNumberRunningMissions() + 1;
 
-		// any airdrop mission will do, Shipping Crate moves it onto the players anyway; the
-		// first one that isn't already running, from a random start
+		// the first one that isn't already running, from a random start
 		int start = Math.RandomInt(0, TEST_MISSIONS.Count());
 		for (int i = 0; i < TEST_MISSIONS.Count(); i++)
 		{
@@ -247,7 +368,7 @@ class CustomMission: MissionServer
 		// deletions happen at the end of the frame: look a second later
 		GetGame().GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(CheckLeftovers, 1000, false, riding, parked, onIt, onIt2, beside);
 
-		// delivery radios: each knob cycles through its list; a tuned knob picks its half
+		// the delivery radio: its knob steps forward and back through the vehicles, with "any" between the last and the first
 		SC_DropRadio blank = SC_DropRadio.Cast(GetGame().CreateObjectEx("SC_DropRadio", TEST_NEAR + "0 1 5", ECE_SETUP));
 		SC_DropRadio tuned = SC_DropRadio.Cast(GetGame().CreateObjectEx("SC_DropRadio", TEST_NEAR + "1 1 5", ECE_SETUP));
 		if (!blank || !tuned)
@@ -256,28 +377,22 @@ class CustomMission: MissionServer
 		{
 			tuned.SC_TuneVehicle();
 			tuned.SC_TuneVehicle();
-			tuned.SC_TuneGuns();
-			tuned.SC_TuneGuns();
-			tuned.SC_TuneGuns();
-			array<SC_DropRadio> none = {blank};
-			array<SC_DropRadio> some = {blank, tuned};
+			string forward = tuned.m_SC_TunedVehicle;
+			tuned.SC_TuneVehicle(-1);
+			string back = tuned.m_SC_TunedVehicle;
+			tuned.SC_TuneVehicle(-1);
+			string toAny = tuned.m_SC_TunedVehicle;
+			tuned.SC_TuneVehicle(-1);
+			string wrapped = tuned.m_SC_TunedVehicle;
+			tuned.SC_TuneVehicle(1);
+			tuned.SC_TuneVehicle(1);
 			string pickedDrop = "nothing";
-			string pickedGun = "nothing";
-			if (SC_DropRadio.ChooseDrop(some))
-				pickedDrop = SC_DropRadio.ChooseDrop(some).name;
-			if (SC_DropRadio.ChooseGun(some))
-				pickedGun = SC_DropRadio.ChooseGun(some).name;
-			Print("[SCTest] radio: knobs on " + tuned.m_SC_TunedVehicle + " / " + tuned.m_SC_TunedGun + "; untuned picks " + SC_DropRadio.ChooseDrop(none) + " / " + SC_DropRadio.ChooseGun(none) + "; with the tuned one: " + pickedDrop + " / " + pickedGun);
+			if (tuned.SC_TunedDrop())
+				pickedDrop = tuned.SC_TunedDrop().name;
+			Print("[SCTest] radio: two forward " + forward + ", one back " + back + ", back again \"" + toAny + "\" (want \"\" = any), back once more " + wrapped + " (want the last); untuned is " + blank.SC_TunedDrop() + "; the tuned one: " + pickedDrop);
 			GetGame().ObjectDelete(blank);
 			GetGame().ObjectDelete(tuned);
 		}
-
-		// two players together in Chernogorsk, one alone at NWAF: the group of two wins
-		array<vector> players = {"6500 0 2500", "6560 0 2440", "4800 0 9800"};
-		vector centre;
-		int size;
-		SC_Spot.Cluster(players, 1000, centre, size);
-		Print("[SCTest] group of " + size + " centred at " + centre + " (expected 2 at 6530 2470), nearest town " + SC_Spot.NearestTown(centre));
 
 		vector near = TEST_NEAR;
 		near[1] = GetGame().SurfaceY(near[0], near[2]);
