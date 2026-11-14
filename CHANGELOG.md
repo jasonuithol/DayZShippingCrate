@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1 - 2026-11-14
+
+- The airdrop planes' navigation lights are off: game crashes (the same access violation every
+  time) followed planes appearing on players' games, Expansion's own airdrops included.
+- Every player always has a delivery radio. A new character whose outfit has no room for it
+  (a nurse, say) now has things thrown out of their pockets onto the ground, one at a time,
+  until it fits, instead of going without; only with nowhere at all to carry it does it go in
+  hand (or at their feet). Anyone joining without one is given another the same way.
+
 ## 0.5 - 2026-11-14
 
 - Deliveries are ordered on the delivery radio, and nothing else starts them: hold it

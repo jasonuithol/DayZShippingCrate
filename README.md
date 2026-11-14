@@ -20,9 +20,10 @@ screwdriver, batteries, every repair kit), a belt with a canteen, a sheathed kni
 holster, a barrel of explosives (C4, IEDs and detonators, claymores, land mines, grenades and
 smoke).
 
-Players order with the **delivery radio**, a bright orange walkie-talkie every new character
-starts with. In hand, a click steps its knob to the next vehicle ("any", a random one, sits
-between the last and the first), and holding it (**Order drop here**) orders that vehicle
+Players order with the **delivery radio**, a bright orange walkie-talkie every player always
+has: each new character gets one, and anyone who joins without one is given another (things
+are thrown out of their pockets until it fits). In hand, a click steps its knob to the next
+vehicle ("any", a random one, sits between the last and the first), and holding it (**Order drop here**) orders that vehicle
 dropped where you stand. One delivery at a time per player: the next order waits until the
 last one has landed (or, with the self-destruct on, blown up).
 
@@ -42,9 +43,10 @@ last one has landed (or, with the self-destruct on, blown up).
    (`Land_ContainerLocked_<colour>_DE`, the 1.23+ one with doors) or pallet deck and loads it. The crate itself
    is parked out of sight under the container floor until the self-destruct.
 
-4. **Lights.** The plane carries red, green and white navigation lights (left wingtip, right
-   wingtip, tail). A spotlight under the falling container lights the ground below, and a
-   runway edge light at each end of its roof turns an orange beacon, falling and landed.
+4. **Lights.** A spotlight under the falling container lights the ground below, and a
+   runway edge light at each end of its roof turns an orange beacon, falling and landed. (The
+   plane's red, green and white navigation lights are switched off since 0.5.1: players' games
+   crashed soon after a plane appeared. `NAV_LIGHTS` in SC_Airdrop.c.)
 5. **Self-destruct (off by default).** With `selfDestructMinutes` set, a stack of IEDs with a
    teddy bear on top sits on the roof (or the pallet's free end). That many minutes after
    landing the bear's eyes glow red and it calls "Эвакуируйтесь!" ("Evacuate!")
@@ -166,7 +168,7 @@ fits every gun kit into every boot, and logs whatever didn't attach, load or fit
 | `.../SC_Pallet.c` | The pallet deck: its layout and the vehicle on it |
 | `.../SC_DropRadio.c` | The delivery radio and its tuning actions (next, previous) |
 | `.../SC_Leftovers.c` | Clearing away drops a server restart left standing |
-| `ShippingCrate/Scripts/5_Mission/` | A delivery radio for every new character; the clean-up after a restart |
+| `ShippingCrate/Scripts/5_Mission/` | A delivery radio for every new character and every player joining without one; the clean-up after a restart |
 | `.../SC_Settings.c` | The JSON settings |
 | `mission/` | Test mission on Chernarus |
 | `.../SC_Lights.c` | The lights: navigation lights, spotlight, beacons, the bear's eyes |

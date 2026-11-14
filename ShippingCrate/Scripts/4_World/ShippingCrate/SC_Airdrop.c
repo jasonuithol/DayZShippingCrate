@@ -152,7 +152,9 @@ modded class ExpansionAirdropPlaneBase
 	protected bool m_SC_NavFollowing;
 	protected float m_SC_NavTime;
 
-	static const bool NAV_LIGHTS = true;   // (2026-11-14: cleared of the helicopter crashes - that was the view distance)
+	// off since 0.5.1: players crashed (access violation, same address every time) about half a
+	// minute after an airdrop plane appeared on their game, three times in a row on 2026-11-14
+	static const bool NAV_LIGHTS = false;
 
 	override void EEInit()
 	{

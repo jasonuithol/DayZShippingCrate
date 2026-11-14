@@ -34,6 +34,69 @@ class SC_DropRadio: Inventory_Base
 
 	// ---- server ----
 
+	// Every player must have one. Into the inventory; when there's no room, the things they
+	// carry are thrown out onto the ground one at a time (the last packed first) until it fits.
+	// Only a player with nowhere to carry it at all gets it in hand (whatever was there goes on
+	// the ground), or at their feet.
+	static bool Has(PlayerBase player)
+	{
+		array<EntityAI> items = new array<EntityAI>();
+		player.GetInventory().EnumerateInventory(InventoryTraversalType.PREORDER, items);
+		foreach (EntityAI item : items)
+		{
+			if (item && item.IsKindOf("SC_DropRadio"))
+				return true;
+		}
+		return false;
+	}
+
+	static void Ensure(PlayerBase player, string why)
+	{
+		if (!player || !player.IsAlive() || Has(player))
+			return;
+		string who = "a player";
+		if (player.GetIdentity())
+			who = player.GetIdentity().GetName();
+		if (player.GetInventory().CreateInInventory("SC_DropRadio"))
+		{
+			Print("[ShippingCrate] gave " + who + " a delivery radio (" + why + ")");
+			return;
+		}
+
+		// make room: out with what's carried in cargo, last packed first, until it fits
+		array<EntityAI> carried = new array<EntityAI>();
+		player.GetInventory().EnumerateInventory(InventoryTraversalType.PREORDER, carried);
+		string thrown = "";
+		for (int i = carried.Count() - 1; i >= 0; i--)
+		{
+			EntityAI thing = carried[i];
+			if (!thing || !thing.GetInventory() || !thing.GetInventory().IsInCargo())
+				continue;
+			string type = thing.GetType();
+			player.ServerDropEntity(thing);
+			if (thrown != "")
+				thrown += ", ";
+			thrown += type;
+			if (player.GetInventory().CreateInInventory("SC_DropRadio"))
+			{
+				Print("[ShippingCrate] gave " + who + " a delivery radio, threw out " + thrown + " to make room (" + why + ")");
+				return;
+			}
+		}
+
+		EntityAI held = player.GetHumanInventory().GetEntityInHands();
+		if (held)
+			player.ServerDropEntity(held);
+		if (player.GetHumanInventory().CreateInHands("SC_DropRadio"))
+		{
+			Print("[ShippingCrate] gave " + who + " a delivery radio in hand, nowhere to carry it (threw out: " + thrown + ") (" + why + ")");
+			return;
+		}
+		g_Game.CreateObjectEx("SC_DropRadio", player.GetPosition(), ECE_PLACE_ON_SURFACE);
+		Print("[ShippingCrate] no room and no free hand on " + who + ": the delivery radio is on the ground at their feet (" + why + ")");
+	}
+
+
 	static array<string> VehicleNames()
 	{
 		array<string> names = new array<string>();
