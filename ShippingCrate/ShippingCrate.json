@@ -341,6 +341,18 @@
                         },
                         {
                             "type": "EpoxyPutty"
+                        },
+                        {
+                            "type": "Pot"
+                        },
+                        {
+                            "type": "Tripod"
+                        },
+                        {
+                            "type": "PetrolLighter"
+                        },
+                        {
+                            "type": "Paper"
                         }
                     ]
                 },
@@ -392,6 +404,94 @@
                             "type": "RDG2SmokeGrenade_Black"
                         }
                     ]
+                },
+                {
+                    "type": "Barrel_Yellow",
+                    "cargo": [
+                        {
+                            "type": "NBCJacketGray",
+                            "count": 2
+                        },
+                        {
+                            "type": "NBCPantsGray",
+                            "count": 2
+                        },
+                        {
+                            "type": "NBCHoodGray",
+                            "count": 2
+                        },
+                        {
+                            "type": "NBCGlovesGray",
+                            "count": 2
+                        },
+                        {
+                            "type": "NBCBootsGray",
+                            "count": 2
+                        },
+                        {
+                            "type": "GP5GasMask",
+                            "count": 2,
+                            "attachments": [
+                                {
+                                    "type": "GasMask_Filter"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "GasMask_Filter",
+                            "count": 4
+                        },
+                        {
+                            "type": "IodineTincture",
+                            "count": 2
+                        }
+                    ]
+                },
+                {
+                    "type": "Barrel_Green",
+                    "cargo": [
+                        {
+                            "type": "FarmingHoe"
+                        },
+                        {
+                            "type": "Pitchfork"
+                        },
+                        {
+                            "type": "Sickle"
+                        },
+                        {
+                            "type": "Shovel"
+                        },
+                        {
+                            "type": "GardenLime",
+                            "count": 2
+                        },
+                        {
+                            "type": "TomatoSeedsPack",
+                            "count": 2
+                        },
+                        {
+                            "type": "PepperSeedsPack",
+                            "count": 2
+                        },
+                        {
+                            "type": "PumpkinSeedsPack",
+                            "count": 2
+                        },
+                        {
+                            "type": "ZucchiniSeedsPack",
+                            "count": 2
+                        },
+                        {
+                            "type": "PotatoSeed",
+                            "count": 4
+                        }
+                    ]
+                },
+                {
+                    "type": "CanisterGasoline",
+                    "liquid": "Water",
+                    "quantity": 1
                 },
                 {
                     "type": "MilitaryBelt",
@@ -702,7 +802,8 @@
                         "type": "Motorbike_01_Wheel_2"
                     }
                 ],
-                "cargo": []
+                "cargo": [],
+                "count": 4
             },
             "items": []
         },
@@ -733,7 +834,8 @@
                         "type": "Motorbike_02_ShieldRight_Red"
                     }
                 ],
-                "cargo": []
+                "cargo": [],
+                "count": 4
             },
             "items": []
         },

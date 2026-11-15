@@ -8,7 +8,8 @@ Expansion's own airdrops (missions and supply signals) carry on as before, untou
 
 The default loads are every vanilla car, truck and motorbike (Ada 4x4, Olga 24, Gunter 2,
 Sarka 120, M1025, M3S Covered, Jana 50, Bitrak 682), each with every part and every fluid, and
-nothing else. The cars come in the container, nose to the doors; the M3S and the M1025 are too
+nothing else. The cars come in the container, nose to the doors, and the motorbikes four to a
+container, two by two; the M3S and the M1025 are too
 big for it and come down on a deck of wooden pallets. With DayZ Expansion Vehicles, its cars,
 helicopters and boats are on the list too.
 
@@ -16,15 +17,18 @@ helicopters and boats are on the list too.
 guns (the five rifles: VSD, LAR, KA-M, SCR 16 and SVAL, loaded, with two spare magazines each), a
 barrel of medical supplies and food, two barrels of clothing and gear, a barrel of base-building
 tools and kits, a barrel of field gear (night-vision goggles, head torch, binoculars, lockpick,
-screwdriver, batteries, every repair kit), a belt with a canteen, a sheathed knife and a
+screwdriver, batteries, every repair kit, a cooking pot, a tripod, a lighter and paper), a belt with a canteen, a sheathed knife and a
 holster, a barrel of explosives (C4, IEDs and detonators, claymores, land mines, grenades and
-smoke).
+smoke), a barrel of NBC gear (two grey suits, gas masks with filters, spare filters, iodine) and
+a barrel of gardening (hoe, pitchfork, sickle, shovel, garden lime, every seed pack), with a
+jerrycan of water beside it.
 
 Players order with the **delivery radio**, a bright orange walkie-talkie every player always
 has: each new character gets one, and anyone who joins without one is given another (things
 are thrown out of their pockets until it fits). In hand, a click steps its knob to the next
-vehicle ("any", a random one, sits between the last and the first), and holding it (**Order drop here**) orders that vehicle
-dropped where you stand. One delivery at a time per player: the next order waits until the
+vehicle ("any", a random one, sits between the last and the first), and holding it (**Order
+drop here**) orders that vehicle dropped where you stand. While one is on its way the button
+says **Cancel current order** and calls it off instead. One delivery at a time per player: the next order waits until the
 last one has landed (or, with the self-destruct on, blown up).
 
 ## How it works
@@ -136,7 +140,7 @@ Every item, the vehicle included, takes:
 | Field | What |
 |---|---|
 | `type` | Class name. `"A\|B\|C"` picks one at random. |
-| `count` | How many. Left out: 1. |
+| `count` | How many. Left out: 1. A container load's vehicle can have a count too: they park side by side in rows back from the doors, as many as fit (the log says when some didn't). |
 | `attachments` | Items on it. Vehicle parts are fitted to whichever slot is free, so `HatchbackWheel` × 5 gives four wheels and the spare. |
 | `cargo` | Items in it: a vehicle's boot, a backpack, a box. |
 | `magazine` | Firearms: a full magazine loaded, a round chambered. |

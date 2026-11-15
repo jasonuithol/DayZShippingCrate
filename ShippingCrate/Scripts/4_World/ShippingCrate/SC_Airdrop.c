@@ -19,13 +19,18 @@ class SC_Order
 	ref SC_Gun m_Gun;
 	ExpansionAirdropPlaneBase m_Plane;
 	ShippingCrate_Airdrop m_Crate;
+	bool m_Cancelled;
 
 	static ref array<ref SC_Order> s_Orders = new array<ref SC_Order>();
+	static bool s_Watching;
+	static const int WATCH_MS = 2000;
 
 	// still coming, or landed and not yet blown (with no self-destruct - the default - done once
 	// it has landed)
 	bool Active()
 	{
+		if (m_Cancelled)
+			return false;
 		if (m_Plane)
 			return true;
 		if (!m_Crate)
@@ -41,6 +46,71 @@ class SC_Order
 				return o;
 		}
 		return null;
+	}
+
+	// Each player's radio shows "Cancel current order" while they have one coming: their
+	// m_SC_OrderPending (synchronised) follows their order, checked every couple of seconds
+	// while any order is out (they end by landing, so nothing else says when).
+	static void Watch()
+	{
+		if (s_Watching)
+			return;
+		s_Watching = true;
+		g_Game.GetCallQueue(CALL_CATEGORY_GAMEPLAY).CallLater(Refresh, WATCH_MS, true);
+	}
+
+	static void Refresh()
+	{
+		for (int i = s_Orders.Count() - 1; i >= 0; i--)
+		{
+			if (!s_Orders[i].Active())
+				s_Orders.Remove(i);
+		}
+		array<Man> players = new array<Man>();
+		g_Game.GetPlayers(players);
+		foreach (Man man : players)
+		{
+			PlayerBase p = PlayerBase.Cast(man);
+			if (p && p.GetIdentity())
+				p.SC_SetOrderPending(Of(p.GetIdentity().GetId()) != null);
+		}
+		if (s_Orders.Count() == 0)
+		{
+			g_Game.GetCallQueue(CALL_CATEGORY_GAMEPLAY).Remove(Refresh);
+			s_Watching = false;
+		}
+	}
+
+	// the radio's button while an order is out: the plane goes on the server (players' games
+	// still fly their own copy of it over, which never drops anything), and a crate still
+	// falling goes with its load; one that has landed stays where it is
+	static void Cancel(PlayerBase player)
+	{
+		if (!player || !player.GetIdentity())
+			return;
+		SC_Order o = Of(player.GetIdentity().GetId());
+		if (!o)
+		{
+			player.SC_SetOrderPending(false);
+			Tell(player, "You have no delivery to cancel.", false);
+			return;
+		}
+		o.m_Cancelled = true;
+		string what = "called off";
+		if (o.m_Plane)
+		{
+			o.m_Plane.m_SC_Order = null;
+			g_Game.ObjectDelete(o.m_Plane);
+			what = "called off: the plane will fly over without dropping it";
+		}
+		if (o.m_Crate && !o.m_Crate.SC_HasLanded())
+		{
+			g_Game.ObjectDelete(o.m_Crate);
+			what = "called off, the drop is gone";
+		}
+		player.SC_SetOrderPending(false);
+		Print("[ShippingCrate] " + player.GetIdentity().GetName() + " cancelled their " + o.m_Name + ": " + what);
+		Tell(player, "Your " + o.m_Name + " is " + what + ". You can order again.");
 	}
 
 	static void Tell(PlayerBase player, string text, bool ok = true)
@@ -129,6 +199,8 @@ class SC_Order
 				s_Orders.Remove(i);
 		}
 		s_Orders.Insert(order);
+		player.SC_SetOrderPending(true);
+		Watch();
 
 		Print("[ShippingCrate] " + player.GetIdentity().GetName() + " ordered " + drop.name + " (" + by + ") to " + spot + " near " + town + " (stood at " + stood + ", " + vector.Distance(stood, spot) + " m away)");
 		Tell(player, drop.name + " ordered. A plane is on its way: stay near " + town + ".");

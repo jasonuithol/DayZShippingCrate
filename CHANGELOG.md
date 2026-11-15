@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.2 - 2026-11-15
+
+- With a delivery on its way, the radio's button says "Cancel current order" and calls it off:
+  no drop (players still see the plane fly over), or, if the crate is already falling, the
+  crate and its load are gone. A drop that has landed stays. Then the button orders again.
+- Equipment has two more barrels: NBC gear (two grey suits with hoods, gloves and boots, GP5 gas
+  masks with a filter in, spare filters, iodine) and gardening (hoe, pitchfork, sickle, shovel,
+  garden lime, tomato, pepper, pumpkin and zucchini seed packs, seed potatoes), with a jerrycan of water beside it.
+- Motorbikes come four to a container (a load's vehicle can have a `count`: they park side by
+  side, in rows back from the doors, as many as fit).
+- The field gear barrel has a cooking pot, a tripod to hang it over a fire, a lighter and a
+  piece of paper to get the fire going.
+
 ## 0.5.1 - 2026-11-14
 
 - The airdrop planes' navigation lights are off: game crashes (the same access violation every

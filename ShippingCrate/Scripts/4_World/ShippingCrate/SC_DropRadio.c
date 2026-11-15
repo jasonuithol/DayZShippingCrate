@@ -304,12 +304,47 @@ class SC_ActionOrderDrop: ActionContinuousBase
 
 	override bool ActionCondition(PlayerBase player, ActionTarget target, ItemBase item)
 	{
-		return SC_DropRadio.Cast(item) != null;
+		if (!SC_DropRadio.Cast(item))
+			return false;
+		if (player.SC_OrderPending())
+			m_Text = "Cancel current order";
+		else
+			m_Text = "Order drop here";
+		return true;
 	}
 
+	// one button: order, or with an order out, cancel it
 	override void OnFinishProgressServer(ActionData action_data)
 	{
-		SC_Order.Place(action_data.m_Player, SC_DropRadio.Cast(action_data.m_MainItem));
+		if (action_data.m_Player.SC_OrderPending())
+			SC_Order.Cancel(action_data.m_Player);
+		else
+			SC_Order.Place(action_data.m_Player, SC_DropRadio.Cast(action_data.m_MainItem));
+	}
+}
+
+// whether the player has a delivery out (server: set by SC_Order; synchronised so their
+// radio's button can say "Cancel current order")
+modded class PlayerBase
+{
+	protected bool m_SC_OrderPending;
+
+	void PlayerBase()
+	{
+		RegisterNetSyncVariableBool("m_SC_OrderPending");
+	}
+
+	bool SC_OrderPending()
+	{
+		return m_SC_OrderPending;
+	}
+
+	void SC_SetOrderPending(bool pending)
+	{
+		if (m_SC_OrderPending == pending)
+			return;
+		m_SC_OrderPending = pending;
+		SetSynchDirty();
 	}
 }
 

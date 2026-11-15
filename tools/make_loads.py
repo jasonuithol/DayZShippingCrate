@@ -66,6 +66,9 @@ EXPANSION = [
     ("Utility Boat", ["ExpansionUtilityBoat", "ExpansionUtilityBoat_Black", "ExpansionUtilityBoat_Green"], "pallet", "water"),
 ]
 
+# loads of several: a container of four motorbikes (SC_Spawn parks as many as fit)
+HOW_MANY = {"Motorbike": 4, "Sport bike": 4}
+
 def counted(types):
     out = []
     for t in types:
@@ -81,6 +84,8 @@ for name, variants in VEHICLES:
     if not p:
         sys.exit("no parts for " + variants[0])
     vehicle = {"type": "|".join(variants), "fluids": True, "attachments": counted(p), "cargo": []}
+    if name in HOW_MANY:
+        vehicle["count"] = HOW_MANY[name]
     drops.append({"name": name, "weight": 1, "carrier": "", "vehicle": vehicle, "items": []})
 for name, variants, *rest in EXPANSION:
     vehicle = {"type": "|".join(variants), "fluids": True, "fit": True, "attachments": [], "cargo": []}
@@ -234,12 +239,24 @@ EQUIPMENT = {"name": "Equipment", "weight": 1, "carrier": "container", "items": 
                      ("Headtorch_Black", 1, {"attachments": [{"type": "Battery9V"}]}), ("Battery9V", 4, {}),
                      ("Binoculars", 1, {}), ("Lockpick", 1, {}), ("Screwdriver", 1, {}), ("SewingKit", 1, {}),
                      ("LeatherSewingKit", 1, {}), ("WeaponCleaningKit", 1, {}), ("ElectronicRepairKit", 1, {}),
-                     ("TireRepairKit", 1, {}), ("EpoxyPutty", 1, {})]),
+                     ("TireRepairKit", 1, {}), ("EpoxyPutty", 1, {}),
+                     ("Pot", 1, {}), ("Tripod", 1, {}), ("PetrolLighter", 1, {}), ("Paper", 1, {})]),
     # thrown and deployable explosives, with detonators for the C4 and the IEDs
     barrel("Red", [("RemoteDetonator", 2, {}), ("Plastic_Explosive", 3, {}), ("ImprovisedExplosive", 2, {}),
                    ("ClaymoreMine", 2, {}), ("LandMineTrap", 2, {}), ("M67Grenade", 3, {}), ("RGD5Grenade", 3, {}),
                    ("FlashGrenade", 2, {}), ("Grenade_ChemGas", 1, {}), ("M18SmokeGrenade_Green", 1, {}),
                    ("M18SmokeGrenade_Red", 1, {}), ("RDG2SmokeGrenade_Black", 1, {})]),
+    # NBC: two grey suits, gas masks with a filter in, spare filters, iodine against radiation
+    barrel("Yellow", [("NBCJacketGray", 2, {}), ("NBCPantsGray", 2, {}), ("NBCHoodGray", 2, {}),
+                      ("NBCGlovesGray", 2, {}), ("NBCBootsGray", 2, {}),
+                      ("GP5GasMask", 2, {"attachments": [{"type": "GasMask_Filter"}]}),
+                      ("GasMask_Filter", 4, {}), ("IodineTincture", 2, {})]),
+    # gardening: tools, lime for the soil, every vanilla seed pack
+    barrel("Green", [("FarmingHoe", 1, {}), ("Pitchfork", 1, {}), ("Sickle", 1, {}), ("Shovel", 1, {}),
+                     ("GardenLime", 2, {}), ("TomatoSeedsPack", 2, {}), ("PepperSeedsPack", 2, {}),
+                     ("PumpkinSeedsPack", 2, {}), ("ZucchiniSeedsPack", 2, {}), ("PotatoSeed", 4, {})]),
+    # water for the plants: the jerrycan doesn't fit in the barrel with the tools
+    {"type": "CanisterGasoline", "liquid": "Water", "quantity": 1},
     # loose on the floor: a belt in cargo can't take attachments (vanilla MilitaryBelt)
     {"type": "MilitaryBelt", "attachments": [{"type": "Canteen", "liquid": "Water", "quantity": 1},
                                              {"type": "NylonKnifeSheath", "attachments": [{"type": "CombatKnife"}]},

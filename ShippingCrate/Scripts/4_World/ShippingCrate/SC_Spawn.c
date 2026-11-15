@@ -7,6 +7,8 @@ class SC_Spawn
 	static const float VEHICLE_LIFETIME = 3888000; // 45 days, same as vanilla vehicles
 	static const float WALL = 0.25;                // keep this far from the inside of the walls
 	static const float GAP = 0.3;                  // between the vehicle and the doors / the items
+	static const float SIDE_GAP = 0.1;             // between vehicles side by side
+	static const float NO_FRONT = -1000;          // Vehicle(): park it at the doors
 
 	// Long axis, door end and floor of the carrier, in its frame.
 	vector m_Frame[4];
@@ -214,6 +216,13 @@ class SC_Spawn
 					gun = null;   // stowed
 				}
 				itemsTo = HalfLength() - GAP - VehicleLength(vehicle) - GAP;
+				// more of them (a container of motorbikes): side by side, in rows back from the doors
+				int wanted = SC_Settings.Count(drop.vehicle);
+				if (wanted > 1 && !m_OnPallet)
+				{
+					int more = MoreVehicles(drop.vehicle, vehicle, wanted, itemsTo);
+					created += more;
+				}
 			}
 		}
 
@@ -263,6 +272,46 @@ class SC_Spawn
 		return created;
 	}
 
+	// The first one is parked in the middle, nose to the doors. With count > 1 it moves over and
+	// the rest go beside it, in rows: as many across as their width lets, rows back from the doors
+	// for as long as the floor lasts. Returns how many more were made; itemsTo moves back past them.
+	int MoreVehicles(SC_Item spec, EntityAI first, int wanted, out float itemsTo)
+	{
+		vector mm[2];
+		Bounds(first, mm);
+		float w = mm[1][0] - mm[0][0];
+		float len = mm[1][2] - mm[0][2];
+		float width = 2 * HalfWidth();
+		int across = Math.Max(1, Math.Floor((width + SIDE_GAP) / (w + SIDE_GAP)));
+		int rows = Math.Max(1, Math.Floor((2 * HalfLength() - GAP) / (len + GAP)));
+		int fits = Math.Min(wanted, across * rows);
+		if (fits < wanted)
+			Print("[ShippingCrate] " + first.GetType() + " (" + w + " x " + len + " m): room for " + fits + " of " + wanted + " in the container");
+		across = Math.Min(across, fits);
+		rows = (fits + across - 1) / across;
+
+		int made = 0;
+		for (int i = 0; i < fits; i++)
+		{
+			int row = i / across;
+			int col = i % across;
+			int inRow = Math.Min(across, fits - row * across);
+			float side = (col - (inRow - 1) * 0.5) * (w + SIDE_GAP);
+			float front = HalfLength() - GAP - row * (len + GAP);
+			if (i == 0)
+			{
+				Park(first, front, side);
+				continue;
+			}
+			EntityAI v = Vehicle(spec, SC_Settings.Choose(spec.type), front, side);
+			if (v)
+				made++;
+		}
+		itemsTo = HalfLength() - GAP - rows * (len + GAP);
+		Print("[ShippingCrate] " + (made + 1) + " x " + first.GetType() + " (" + w + " x " + len + " m), " + across + " across, " + rows + " rows");
+		return made;
+	}
+
 	float VehicleLength(EntityAI vehicle)
 	{
 		vector mm[2];
@@ -270,8 +319,9 @@ class SC_Spawn
 		return mm[1][2] - mm[0][2];
 	}
 
-	// Parked with its front bumper GAP short of the doors (or the deck's edge), facing out.
-	EntityAI Vehicle(SC_Item spec, string type)
+	// Parked with its front bumper GAP short of the doors (or the deck's edge), facing out; or
+	// with it at front (from the middle towards the doors), side metres to the side.
+	EntityAI Vehicle(SC_Item spec, string type, float front = NO_FRONT, float side = 0)
 	{
 		vector outward = vector.Zero;
 		outward[m_Axis] = m_DoorSign;
@@ -307,15 +357,28 @@ class SC_Spawn
 			Fill(vehicle, spec, true);
 		}
 
+		if (front == NO_FRONT)
+			front = HalfLength() - GAP;
+		Park(vehicle, front, side);
+		return vehicle;
+	}
+
+	// its nose front metres from the middle towards the doors, side metres across, facing out
+	void Park(EntityAI vehicle, float front, float side)
+	{
+		vector outward = vector.Zero;
+		outward[m_Axis] = m_DoorSign;
+		float yaw = Dir(outward).VectorToAngles()[0];
+		vehicle.SetOrientation(Vector(yaw, 0, 0));
 		vector mm[2];
 		Bounds(vehicle, mm);
 		float half = (mm[1][2] - mm[0][2]) * 0.5;
-		float along = HalfLength() - GAP - half;
-		vector p = ToWorld(Inside(along, 0, 0));
+		float along = front - half;
+		vector p = ToWorld(Inside(along, side, 0));
 		// model z runs front to back; centre it on its footprint, wheels just above the floor
 		vector offset = vehicle.VectorToParent(Vector((mm[0][0] + mm[1][0]) * 0.5, 0, (mm[0][2] + mm[1][2]) * 0.5));
 		p = p - offset;
-		p[1] = ToWorld(Inside(along, 0, 0))[1] - mm[0][1] + 0.1;
+		p[1] = ToWorld(Inside(along, side, 0))[1] - mm[0][1] + 0.1;
 		if (m_Water)
 			p[1] = Math.Max(p[1], SC_Spot.WaterY(p[0], p[2]) - mm[0][1] * 0.3);   // floating, its hull a little in the water
 		vehicle.SetPosition(p);
@@ -323,7 +386,6 @@ class SC_Spawn
 		KeepLifetime(vehicle);
 		dBodyEnableGravity(vehicle, true);   // a vehicle that rode down had it off
 		dBodyActive(vehicle, ActiveState.ACTIVE);
-		return vehicle;
 	}
 
 	// A vehicle's lifetime, for good. SetLifetime alone doesn't last: anything attached to it or
